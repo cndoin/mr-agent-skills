@@ -43,7 +43,7 @@ BACKUP_ROOT = os.path.join(CACHE_DIR, "backups")
 
 # 复制时要排除的东西：版本控制、缓存、运行产物、以及那个 10 MB 的第三方数据
 EXCLUDE = {".git", "__pycache__", "output", "mragent-runs", "opengwas.csv",
-           ".pytest_cache", ".mypy_cache"}
+           ".pytest_cache", ".mypy_cache", "smr_fixture"}
 
 
 def targets():

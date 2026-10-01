@@ -17,6 +17,9 @@ test.R
 # 它由 install.py 下载到 ~/.cache/mr-agent/ ，不进版本库。
 opengwas.csv
 
+# ---- SMR 测试夹具（由 tests/gen_smr_fixture.py 生成，含二进制 .bed）----
+tests/smr_fixture/
+
 # ---- 虚拟环境 ----
 .venv/
 venv/
