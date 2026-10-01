@@ -53,7 +53,7 @@ def collect_pdfs(root):
     return buckets
 
 
-def summarize(root):
+def summarize(root, limit=50):
     root = os.path.abspath(root)
     if not os.path.isdir(root):
         return {"tool": "mragent-summarize", "ok": False,
@@ -90,7 +90,7 @@ def summarize(root):
             "row_count": len(rows),
             "non_null_pairs": len(pairs),
             "MRorNot_distribution": mr_or_not,
-            "pairs": pairs[:50],
+            "pairs": pairs[:limit],
         }
 
     if snp_path:
@@ -112,7 +112,7 @@ def summarize(root):
                 combos.append("%s -> %s" % (e, o))
         report["mr_run"] = {
             "row_count": len(rows),
-            "combos": sorted(set(combos))[:100],
+            "combos": sorted(set(combos))[:limit],
         }
     else:
         report["warning"] = ("未找到 mr_run.csv —— 说明流程没走到 step8。"
@@ -123,13 +123,34 @@ def summarize(root):
     return report
 
 
-def main():
-    if len(sys.argv) != 2:
+def main(argv=None):
+    import argparse
+
+    # 用 argparse 而不是裸 sys.argv：否则 `--help` 会被当成目录路径，
+    # 返回 "目录不存在" 的 JSON（exit 1）—— 与其余 10 个脚本
+    # 「--help 输 usage、exit 0」的约定不一致。
+    ap = argparse.ArgumentParser(
+        prog="summarize_output.py",
+        description="解析 MRAgent 的 output/ 目录，产出结构化 JSON 摘要",
+        epilog="判成败的关键：mr_run.csv 是否存在（存在才说明真的跑了 MR）")
+    ap.add_argument("directory", nargs="?",
+                    help="output 根目录，或某个 run 目录（含 output/ 的那层）")
+    ap.add_argument("--limit", type=int, default=50,
+                    help="pairs / combos 的最大输出条数，默认 50")
+    ap.add_argument("--strict", action="store_true",
+                    help="未找到 mr_run.csv 时退出码 1（默认也是 1，此开关仅作显式声明）")
+    args = ap.parse_args(argv)
+
+    if not args.directory:
         sys.stderr.write("用法: python summarize_output.py <output目录>\n")
         json.dump({"tool": "mragent-summarize", "ok": False,
-                   "error": "缺少目录参数"}, sys.stdout, ensure_ascii=False, indent=2)
+                   "error": "缺少目录参数",
+                   "hint": "运行 `python summarize_output.py --help` 查看用法"},
+                  sys.stdout, ensure_ascii=False, indent=2)
+        sys.stdout.write("\n")
         return 2
-    report = summarize(sys.argv[1])
+
+    report = summarize(args.directory, limit=args.limit)
     json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
     return 0 if report.get("ok") else 1
