@@ -63,6 +63,24 @@ python tools/export_results.py ./mragent-runs/back_pain_O_*/output
 | `E` | `--exposure` | 曝露から候補アウトカムを探索 |
 | `OE` | `--exposure` と `--outcome` | 指定したペアを検証 |
 
+## SMR / HEIDI（任意）
+
+`tools/mr_smr.py` は要約データによる SMR（Zhu et al. 2016 *Nat Genet*）と HEIDI 検定を提供し、TwoSampleMR では答えられない「**どの遺伝子がこのシグナルを媒介しているか**」に答えます。
+
+```bash
+# 1. 公式 smr バイナリを用意（プラットフォーム別に取得して検証し、グローバルキャッシュへ展開。既存のものは SMR_BIN で指定）
+python tools/mr_smr.py fetch-binary
+# 2. 環境と入力を確認
+python tools/mr_smr.py preflight
+# 3. 解析：native は依存ゼロ、official は公式バイナリを駆動
+python tools/mr_smr.py analyze --engine native \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+python tools/mr_smr.py analyze --engine official \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+```
+
+`--engine native` は標準ライブラリのみの実装で、SMR 検定は公式と**桁まで一致**します。HEIDI の `p_HEIDI` は小数位に既知の差があります（結論の向きは一致し、出力とドキュメントに明示）。公式の任意の引数は `official` サブコマンドでそのまま渡せるため、公式機能に欠落はありません。データ形式、48 個のフラグ対応、実測キャリブレーションは [`references/smr.md`](../../references/smr.md) を参照。この経路に R も `mragent` も OpenGWAS トークンも不要で、必要なのは Python と cis-xQTL / GWAS の要約データだけです。
+
 ## 同義語拡張
 
 UMLS 同義語拡張はデフォルトでオフです。上流 MRAgent API は UMLS key を内部に持ち、現在このランナーから置き換えられません。`--synonyms` を明示すると上流の動作が有効になります。単独の `tools/mr_synonyms.py` はユーザー自身の `UMLS_API_KEY` を必要とします。
@@ -76,4 +94,6 @@ MR 推定値は操作変数、研究デザイン、サンプル重複、デー�
 - [`references/api.md`](../../references/api.md) — コンストラクターとステップ
 - [`references/pitfalls.md`](../../references/pitfalls.md) — 上流の既知の問題
 - [`references/environment.md`](../../references/environment.md) — 環境設定
+- [`references/smr.md`](../../references/smr.md) — SMR / HEIDI：データ形式と 2 つのエンジン
+
 - [`SECURITY.md`](../../SECURITY.md) — 認証情報とリスク

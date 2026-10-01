@@ -63,6 +63,24 @@ Each actual invocation creates a new work directory. `--dry-run` does not create
 | `E` | `--exposure` | Discover candidate outcomes for an exposure |
 | `OE` | `--exposure` and `--outcome` | Validate one specified pair |
 
+## SMR / HEIDI (optional)
+
+`tools/mr_smr.py` runs SMR (Zhu et al. 2016 *Nat Genet*) and the HEIDI test on summary data, answering the question TwoSampleMR cannot: **which gene mediates this signal?**
+
+```bash
+# 1. Prepare the official smr binary (downloaded and verified into the global cache; or point SMR_BIN at one you already have)
+python tools/mr_smr.py fetch-binary
+# 2. Check the environment and your inputs
+python tools/mr_smr.py preflight
+# 3. Analyze: native has no dependencies, official drives the upstream binary
+python tools/mr_smr.py analyze --engine native \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+python tools/mr_smr.py analyze --engine official \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+```
+
+`--engine native` is a pure standard-library implementation whose SMR test matches the official binary **digit for digit**; the HEIDI `p_HEIDI` has a known difference in the decimals (the direction agrees, and both the output and the docs say so). Use the `official` sub-command to pass any upstream flag through verbatim — no official capability is left out. Data formats, the 48 mapped flags, and the measured calibration are in [`references/smr.md`](../../references/smr.md). This path needs no R, no `mragent`, and no OpenGWAS token — only Python and your cis-xQTL / GWAS summary data.
+
 ## Synonym expansion
 
 UMLS expansion is off by default. The upstream MRAgent API embeds an UMLS key and does not currently expose a way for this runner to replace it. Explicit `--synonyms` enables that upstream behavior. The standalone `tools/mr_synonyms.py` instead requires your own `UMLS_API_KEY`.
@@ -76,4 +94,6 @@ MR results depend on instrument validity, study design, sample overlap, and data
 - [`references/api.md`](../../references/api.md) — constructor and step details
 - [`references/pitfalls.md`](../../references/pitfalls.md) — upstream failure modes
 - [`references/en/environment.md`](../../references/en/environment.md) — full setup notes
+- [`references/smr.md`](../../references/smr.md) — SMR / HEIDI: data formats and the two engines
+
 - [`SECURITY.md`](../../SECURITY.md) — credential handling and known risks

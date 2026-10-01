@@ -63,6 +63,29 @@ python tools/export_results.py ./mragent-runs/back_pain_O_*/output
 | `E` | `--exposure` | 为暴露发现候选结局 |
 | `OE` | `--exposure` 和 `--outcome` | 验证指定的一对 |
 
+## SMR / HEIDI（可选）
+
+`tools/mr_smr.py` 提供基于汇总数据的 SMR（Zhu et al. 2016 *Nat Genet*）与 HEIDI 检验，
+回答 TwoSampleMR 回答不了的问题：**哪个基因介导了这个信号**。
+
+```bash
+# 1. 准备官方 smr 二进制（按平台下载并校验，解压到全局缓存；已有则用 SMR_BIN 指定）
+python tools/mr_smr.py fetch-binary
+# 2. 检查环境与输入
+python tools/mr_smr.py preflight
+# 3. 跑分析：native 零依赖，official 驱动官方二进制
+python tools/mr_smr.py analyze --engine native \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+python tools/mr_smr.py analyze --engine official \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+```
+
+`--engine native` 是纯标准库实现，SMR 检验与官方**逐位一致**；HEIDI 的 `p_HEIDI`
+小数位有已知差异（结论方向一致，输出与文档均已标注）。需要官方任意参数时用
+`official` 子命令原样透传，官方功能一个不缺。数据格式、48 条参数映射与实测校准见
+[`references/smr.md`](../../references/smr.md)。这条链路不需要 R、`mragent` 或 OpenGWAS
+token —— 只要 Python 和你的 cis-xQTL / GWAS 汇总数据。
+
 ## 同义词扩展
 
 UMLS 同义词扩展默认关闭。上游 MRAgent API 内置了 UMLS key，当前运行器无法将它替换为用户自己的 key。显式传入 `--synonyms` 会启用上游行为。独立工具 `tools/mr_synonyms.py` 则要求你提供自己的 `UMLS_API_KEY`。
@@ -76,4 +99,6 @@ MR 结果受工具变量有效性、研究设计、样本重叠和数据可用�
 - [`references/api.md`](../../references/api.md) — 构造参数和步骤
 - [`references/pitfalls.md`](../../references/pitfalls.md) — 上游已知问题
 - [`references/environment.md`](../../references/environment.md) — 环境搭建
+- [`references/smr.md`](../../references/smr.md) — SMR / HEIDI：数据格式与双引擎
+
 - [`SECURITY.md`](../../SECURITY.md) — 凭据和已知风险

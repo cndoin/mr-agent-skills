@@ -14,6 +14,8 @@ Una skill de agente de código abierto para la investigación de aleatorización
 
 MR Agent convierte [MRAgent](https://github.com/xuwei1997/MRAgent) en un flujo revisable: búsqueda bibliográfica en PubMed, consulta de conjuntos GWAS, ejecución de TwoSampleMR mediante R y revisión de resultados. Añade comprobaciones del entorno, directorios aislados, salida JSON estructurada y herramientas para revisar los CSV intermedios. Los métodos estadísticos pertenecen a MRAgent y sus dependencias de R.
 
+**Más allá del upstream: SMR / HEIDI.** El MRAgent upstream solo incluye TwoSampleMR (IVW / Egger / weighted median / mode), por lo que no responde a *qué gen media esta señal*. Esta skill añade SMR (MR basada en datos resumen, Zhu et al. 2016 *Nat Genet*) y la prueba HEIDI. `--engine official` controla el binario oficial `smr` (48 flags mapeados, más el subcomando `official` para pasar cualquier opción sin pérdidas); `--engine native` es una implementación sin dependencias cuyo test SMR coincide con el oficial **dígito a dígito** (el `p_HEIDI` de HEIDI tiene una diferencia conocida en los decimales, señalada de forma explícita). Véase [`references/smr.md`](references/smr.md).
+
 ## Modos
 
 | Modo | Uso |

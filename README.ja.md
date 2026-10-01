@@ -14,6 +14,8 @@
 
 [MRAgent](https://github.com/xuwei1997/MRAgent) を、PubMed での文献探索、GWAS データセットの検索、R を通じた TwoSampleMR の実行、結果レビューまでつなぐ確認可能なワークフローにまとめています。環境チェック、実行ごとの独立ディレクトリ、構造化出力、中間 CSV の確認・編集ツールを追加します。統計手法そのものは MRAgent と R の依存パッケージが提供します。
 
+**上流を超える部分：SMR / HEIDI。** 上流 MRAgent には TwoSampleMR（IVW / Egger / weighted median / mode）しかなく、*どの遺伝子がこのシグナルを媒介しているか* には答えられません。本 skill は SMR（要約データに基づく MR、Zhu et al. 2016 *Nat Genet*）と HEIDI 検定を追加で実装しています。`--engine official` は公式 `smr` バイナリを駆動し（48 個のフラグを対応付け、さらに無損失でそのまま渡す `official` サブコマンドを用意）、`--engine native` は依存ゼロの実装で SMR 検定が公式と **桁まで一致** します（HEIDI の `p_HEIDI` は小数位に既知の差があり、明示しています）。詳細は [`references/smr.md`](references/smr.md)。
+
 ## 機能
 
 | モード | 内容 |

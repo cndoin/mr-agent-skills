@@ -63,6 +63,24 @@ Chaque véritable exécution crée un nouveau dossier. `--dry-run` affiche la co
 | `E` | `--exposure` | Chercher des résultats candidats pour une exposition |
 | `OE` | `--exposure` et `--outcome` | Évaluer une paire définie |
 
+## SMR / HEIDI (facultatif)
+
+`tools/mr_smr.py` exécute SMR (Zhu et al. 2016 *Nat Genet*) et le test HEIDI sur données résumées, et répond à la question que TwoSampleMR ne peut pas traiter : **quel gène médiatise ce signal ?**
+
+```bash
+# 1. Préparez le binaire officiel smr (téléchargé et vérifié dans le cache global ; ou indiquez-en un avec SMR_BIN)
+python tools/mr_smr.py fetch-binary
+# 2. Vérifiez l’environnement et vos entrées
+python tools/mr_smr.py preflight
+# 3. Analysez : native n’a aucune dépendance, official pilote le binaire officiel
+python tools/mr_smr.py analyze --engine native \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+python tools/mr_smr.py analyze --engine official \
+  --besd ./data/gene.besd --gwas ./data/trait.ma --out ./out/smr
+```
+
+`--engine native` est une implémentation fondée uniquement sur la bibliothèque standard, dont le test SMR correspond à l’officiel **chiffre par chiffre** ; le `p_HEIDI` de HEIDI présente un écart connu sur les décimales (le sens concorde, et la sortie comme la documentation le signalent). La sous-commande `official` transmet telle quelle n’importe quelle option officielle : aucune capacité officielle ne manque. Les formats de données, les 48 options mappées et la calibration mesurée sont dans [`references/smr.md`](../../references/smr.md). Cette voie ne demande ni R, ni `mragent`, ni jeton OpenGWAS : seulement Python et vos données résumées cis-xQTL / GWAS.
+
 ## Extension des synonymes
 
 L’extension UMLS est désactivée par défaut. L’API amont de MRAgent contient une clé UMLS et ne permet actuellement pas à ce lanceur de la remplacer. `--synonyms` active ce comportement amont. L’outil autonome `tools/mr_synonyms.py` exige votre propre `UMLS_API_KEY`.
@@ -76,4 +94,6 @@ Les estimations MR dépendent de la validité des instruments, du protocole d’
 - [`references/api.md`](../../references/api.md) — constructeur et étapes
 - [`references/pitfalls.md`](../../references/pitfalls.md) — problèmes connus en amont
 - [`references/environment.md`](../../references/environment.md) — configuration complète
+- [`references/smr.md`](../../references/smr.md) — SMR / HEIDI : formats de données et les deux moteurs
+
 - [`SECURITY.md`](../../SECURITY.md) — identifiants et risques connus

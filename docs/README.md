@@ -9,3 +9,5 @@ Getting-started guides are available in English, Simplified Chinese, Japanese, S
 - [Français](fr/getting-started.md)
 
 The detailed implementation references are being translated incrementally. Start with the English [environment guide](../references/en/environment.md); the original, more detailed Chinese references are in [`../references/`](../references/).
+
+The SMR / HEIDI tool is documented in [`../references/smr.md`](../references/smr.md) (Chinese): data formats, the two engines, and the measured calibration against the official binary.

@@ -14,6 +14,8 @@ Une compétence d’agent open source pour la recherche en randomisation mendél
 
 MR Agent transforme [MRAgent](https://github.com/xuwei1997/MRAgent) en parcours vérifiable : recherche bibliographique dans PubMed, consultation des jeux GWAS, exécution de TwoSampleMR avec R et examen des résultats. Le projet ajoute le contrôle de l’environnement, des répertoires isolés, une sortie JSON structurée et des outils pour examiner les CSV intermédiaires. Les méthodes statistiques sont fournies par MRAgent et ses dépendances R.
 
+**Au-delà de l’amont : SMR / HEIDI.** MRAgent en amont ne propose que TwoSampleMR (IVW / Egger / weighted median / mode) et ne répond donc pas à *quel gène médiatise ce signal*. Cette compétence ajoute SMR (MR sur données résumées, Zhu et al. 2016 *Nat Genet*) et le test HEIDI. `--engine official` pilote le binaire officiel `smr` (48 options mappées, plus la sous-commande `official` qui transmet toute option sans perte) ; `--engine native` est une implémentation sans dépendance dont le test SMR correspond à l’officiel **chiffre par chiffre** (le `p_HEIDI` de HEIDI présente un écart connu sur les décimales, signalé explicitement). Voir [`references/smr.md`](references/smr.md).
+
 ## Modes
 
 | Mode | Utilisation |
