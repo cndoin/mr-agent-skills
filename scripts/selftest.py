@@ -764,6 +764,232 @@ def group_i():
                              "" if ok else crlf[:6]))
 
 
+# ------------------------------------------------------------------ J
+def group_j(base):
+    """SMR 工具：参数门禁（防静默丢 flag）+ 数值对官方金标准。"""
+    print()
+    print("=" * 78)
+    print("J. mr_smr.py：参数门禁 / 数值校准")
+    print("=" * 78)
+    import importlib.util as _iu
+
+    SMR = os.path.join(TOOLS, "mr_smr.py")
+
+    def load_smr():
+        spec = _iu.spec_from_file_location("mragent_mr_smr", SMR)
+        mod = _iu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    # J1 preflight 必须始终是合法 JSON，且 ok 与「是否找到官方二进制」一致。
+    # 无官方二进制时 ok=false，但绝不能退化成非 JSON（把异常堆栈打到 stdout）。
+    case("J1 preflight 恒返回 JSON",
+         [SMR, "preflight"], 0, env={"SMR_BIN": ""},
+         check=lambda d: ("official" in d and "native" in d
+                          and isinstance(d["official"].get("found"), bool)
+                          and d.get("ok") == d["official"]["found"]),
+         group="J")
+
+    # J2/J3 契约：参数错误必须 exit 2 且 stdout 仍是 JSON
+    case("J2 缺子命令 exit 2 + JSON", [SMR], 2, group="J")
+    case("J3 ld 缺 --bfile exit 2 + JSON", [SMR, "ld"], 2, group="J")
+    # dump-besd 没给 --out 时必须拒绝（官方会往 CWD 乱写文件）
+    case("J4 dump-besd 缺 --out exit 2", [SMR, "dump-besd", "--besd", "x"],
+         2, group="J")
+
+    try:
+        mod = load_smr()
+    except Exception as exc:
+        RESULTS.append({"case": "J5 载入 mr_smr 模块", "group": "J", "ok": False,
+                        "exit": 0, "detail": str(exc)})
+        print("[FAIL] J5 载入 mr_smr 模块 %s" % exc)
+        return
+
+    # J5 参数门禁：analyze 解析器里暴露的每个业务 flag，都必须在
+    # OFFICIAL_*_FLAGS 表里有对应项 —— 否则它会被静默丢弃，
+    # 用户以为加了参数，实际官方根本没收到。这是最容易悄悄出错的点。
+    import argparse as _ap
+    ap = mod.build_parser()
+    sub = [x for x in ap._subparsers._group_actions
+           if isinstance(x, _ap._SubParsersAction)][0]
+    an = sub.choices["analyze"]
+    SKIP = {"--help", "--version", "--smr-bin", "--engine", "--raw",
+            "--esd", "--flist",          # 兜底入口 / native 专用
+            "--bfile", "--gwas", "--beqtl", "--out", "--thread-num"}
+    # 注意要比 dest（Namespace 属性名）而不是 flag 字面量：
+    # 本工具刻意对部分 flag 用了更短的名字（--ld-upper vs 官方
+    # --ld-upper-limit，--describe-cis vs 官方 --descriptive-cis），
+    # 比字面量会假失败。dest 相同才是"这个值真的会被转发"的充分条件。
+    tabled = set(f for f, _ in mod.OFFICIAL_OPT_FLAGS)
+    tabled |= set(f for f, _ in mod.OFFICIAL_BOOL_FLAGS)
+    tabled_dests = set(a2 for _, a2 in mod.OFFICIAL_OPT_FLAGS)
+    tabled_dests |= set(a2 for _, a2 in mod.OFFICIAL_BOOL_FLAGS)
+    skip_dests = set(x.lstrip("-").replace("-", "_") for x in SKIP)
+    parser_dests = {}
+    for act in an._actions:
+        d = getattr(act, "dest", None)
+        if d and d not in skip_dests and d != "help":
+            parser_dests[d] = act.option_strings
+    orphan = sorted("%s(dest=%s)" % (parser_dests[d][0], d)
+                    for d in parser_dests if d not in tabled_dests)
+    ok = not orphan
+    RESULTS.append({"case": "J5 每个 flag 都会送到官方", "group": "J", "ok": ok,
+                    "exit": 0,
+                    "detail": "" if ok else "这些 flag 没有翻译表项: %s" % orphan})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL",
+                             "J5 每个 flag 都会送到官方",
+                             "" if ok else orphan))
+
+    # J6 反向：翻译表里的 dest 解析器必须存在，否则永远传不出去（死条目）
+    unknown = sorted(tabled_dests - set(parser_dests))
+    ok = not unknown
+    RESULTS.append({"case": "J6 翻译表无失效项", "group": "J", "ok": ok,
+                    "exit": 0,
+                    "detail": "" if ok else "表里有但解析器没有: %s" % unknown})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", "J6 翻译表无失效项",
+                             "" if ok else unknown))
+
+    # J7 全填一遍，逐个核对官方 flag 真的被生成（含名字不同的映射）
+    VARGS = ["--bfile", "ref", "--gwas", "g.ma", "--beqtl", "e", "--out", "r",
+             "--thread-num", "4", "--engine", "official"]
+    seen = set()
+    for act in an._actions:
+        f = next((x for x in (act.option_strings or []) if x.startswith("--")), None)
+        if not f or f in SKIP or f in seen:
+            continue
+        seen.add(f)
+        if isinstance(act, (_ap._StoreTrueAction, _ap._StoreFalseAction)):
+            VARGS.append(f)
+        elif act.choices:
+            VARGS += [f, str(act.choices[0])]
+        elif act.type is int:
+            VARGS += [f, "4"]
+        elif act.type is float:
+            VARGS += [f, "0.5"]
+        else:
+            VARGS += [f, "V"]
+    a = ap.parse_args(["analyze"] + VARGS)
+    args = ["--bfile", a.bfile, "--gwas-summary", a.gwas]
+    for x in a.beqtl:
+        args += ["--beqtl-summary", x]
+    args += ["--out", a.out or "r", "--thread-num", str(a.thread_num)]
+    mod.append_official_flags(args, a)
+    BASE = {"--bfile", "--gwas-summary", "--beqtl-summary", "--out",
+            "--thread-num"}
+    missing = sorted(tabled - set(args))
+    extra = sorted(x for x in args if x.startswith("--")
+                   and x not in tabled and x not in BASE)
+    ok = not missing and not extra
+    RESULTS.append({"case": "J7 官方 flag 生成完整", "group": "J", "ok": ok,
+                    "exit": 0,
+                    "detail": "" if ok else "缺=%s 多=%s" % (missing, extra)})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", "J7 官方 flag 生成完整",
+                             "" if ok else "缺=%s 多=%s" % (missing, extra)))
+
+    # J8 回归保护：dump-besd 的 --query 是「eQTL p 值阈值」不是「取前 N 条」。
+    # 早期实现写成 default=5，官方直接报错
+    # "--query should be within the range from 0 to 1"。
+    qdef = None
+    for act in sub.choices["dump-besd"]._actions:
+        if "--query" in (act.option_strings or []):
+            qdef = act.default
+    ok = (qdef == 1.0)
+    RESULTS.append({"case": "J8 dump-besd --query 默认=1", "group": "J", "ok": ok,
+                    "exit": 0, "detail": "" if ok else "default=%r" % (qdef,)})
+    print("[%s] %-40s" % ("PASS" if ok else "FAIL", "J8 dump-besd --query 默认=1"))
+
+    # J9 write_esd_from_query 往返自洽：合成 query 表 -> ESD 文件 -> 读回一致
+    try:
+        tmp = os.path.join(base, "esdrt")
+        os.makedirs(tmp, exist_ok=True)
+        recs = [dict(SNP="rs%02d" % i, Chr="2", BP=str(2000 + i * 10),
+                     A1="C", A2="T", Freq="0.31", Probe="cg01", Probe_Chr="2",
+                     Probe_bp="2050", Gene="G1", Orientation="+",
+                     b="0.1%d" % i, SE="0.02", p="1e-9")
+                for i in range(1, 4)]
+        recs.append(dict(recs[0], SNP="rs99", Probe="cg02", Probe_bp="9999"))
+        pref = os.path.join(tmp, "q")
+        made = mod.write_esd_from_query(recs, pref)
+        fl = mod.read_flist(pref + ".flist")
+        e1 = mod.read_esd(os.path.join(tmp, "q_1.esd"))
+        ok = (len(made) == 2 and len(fl) == 2
+              and len(e1) == 3
+              and abs(e1["rs01"]["b"] - 0.11) < 1e-9
+              and e1["rs02"]["bp"] == 2020
+              and fl[0]["probe"] == "cg01"
+              and os.path.basename(fl[0]["esd"]) == "q_1.esd")
+        detail = "" if ok else "made=%d flist=%d esd=%d" % (
+            len(made), len(fl), len(e1))
+    except Exception as exc:
+        ok, detail = False, "%s: %s" % (type(exc).__name__, exc)
+    RESULTS.append({"case": "J9 query->ESD 往返自洽", "group": "J", "ok": ok,
+                    "exit": 0, "detail": detail})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", "J9 query->ESD 往返自洽",
+                             detail))
+
+    # J10 native 引擎数值对官方金标准。
+    # fixture 由确定性生成器现造（种子固定 => 逐字节相同），
+    # 金标准来自官方 smr 1.3.1 在同一数据集上的 --beqtl-summary 分析。
+    fix = os.path.join(base, "fixture")
+    gen = os.path.join(SKILL_ROOT, "tests", "gen_smr_fixture.py")
+    rc, _o, _e = run([gen, fix], cwd=SKILL_ROOT)
+    if rc != 0:
+        RESULTS.append({"case": "J10 native SMR 对官方金标准", "group": "J",
+                        "ok": False, "exit": rc,
+                        "detail": "fixture 生成失败 rc=%r" % (rc,)})
+        print("[FAIL] J10 native SMR 对官方金标准 fixture 生成失败")
+    else:
+        def _golden(d):
+            if not d.get("results"):
+                return False
+            r = d["results"][0]
+            # native 与官方在 b/se/p 上一致到约 6 位有效数字；
+            # 差异来自 ESD 文本只保留 8 位小数（BESD 内部精度更高）。
+            return (abs(float(r["b_SMR"]) - 0.565590) < 1e-5
+                    and abs(float(r["se_SMR"]) - 0.130691) < 1e-5
+                    and abs(float(r["p_SMR"]) - 1.506901e-05) < 1e-9
+                    and int(r["nsnp_HEIDI"]) == 6)
+
+        case("J10 native SMR 对官方金标准",
+             [SMR, "analyze", "--engine", "native",
+              "--bfile", os.path.join(fix, "ref"),
+              "--gwas", os.path.join(fix, "gwas.ma"),
+              "--flist", os.path.join(fix, "eqtl.flist"),
+              "--out", os.path.join(fix, "native_out")],
+             0, env={"SMR_BIN": ""}, check=_golden, group="J")
+
+    # J11 / J12 需要官方二进制：没有就 SKIP（而不是假失败）
+    binpath = mod.find_smr(None)
+    if not binpath:
+        skip("J11 make-besd 生成 BESD", "未找到官方 smr 二进制", group="J")
+        skip("J12 official 引擎数值", "未找到官方 smr 二进制", group="J")
+        skip("J13 official 子命令透传", "未找到官方 smr 二进制", group="J")
+        return
+    env = {"SMR_BIN": binpath}
+    besd = os.path.join(fix, "eqtl")
+    case("J11 make-besd 生成 BESD",
+         [SMR, "make-besd", "--flist", os.path.join(fix, "eqtl.flist"),
+          "--out", besd], 0, env=env,
+         check=lambda d: (d.get("ok") and len(d.get("products", [])) >= 3
+                          and all(os.path.exists(p["path"])
+                                  for p in d["products"])),
+         group="J")
+    case("J12 official 引擎数值",
+         [SMR, "analyze", "--engine", "official", "--bfile", os.path.join(fix, "ref"),
+          "--gwas", os.path.join(fix, "gwas.ma"), "--beqtl", besd,
+          "--out", os.path.join(fix, "official_out")], 0, env=env,
+         check=lambda d: bool(d.get("results")) and abs(
+             float(d["results"][0]["b_SMR"]) - 0.56559) < 1e-5,
+         group="J")
+
+    # J13 official 子命令必须能原样透传本工具没显式列出的 flag
+    case("J13 official 子命令透传",
+         [SMR, "official", "--", "--beqtl-summary", besd, "--query", "5e-8",
+          "--out", os.path.join(fix, "rawq")], 0, env=env,
+         check=lambda d: d.get("ok") and d.get("outputs"),
+         group="J")
+
+
 def main():
     ap = argparse.ArgumentParser(description="mr-agent 全量自检")
     ap.add_argument("--quick", action="store_true", help="跳过真实网络探测")
@@ -784,6 +1010,7 @@ def main():
         group_fg()
         group_h()
         group_i()
+        group_j(base)
     finally:
         shutil.rmtree(base, ignore_errors=True)
 
