@@ -79,12 +79,13 @@ mr-agent/
 │   ├── api.md                    # 源码实测的 API 速查（签名 / step / 文件名）
 │   ├── environment.md            # Python / R / token 完整搭建与验证
 │   ├── pitfalls.md               # 19 个坑位，按严重程度分级
+│   ├── smr.md                    # SMR / HEIDI：数据格式、双引擎、官方校准实测
 │   └── upstream-diff.md          # 上游仓库 vs PyPI 包 vs 本技能的能力对照
 ├── scripts/                      # 流程编排
 │   ├── preflight.py              # 环境预检 → 结构化 JSON
 │   ├── run_mr.py                 # 统一运行入口（独立目录 + 日志捕获 + 静默失败捕获）
 │   ├── summarize_output.py       # 解析 output/ → 结构化摘要
-│   └── selftest.py               # 95 条自检用例
+│   └── selftest.py               # 110 条自检用例
 └── tools/                        # 原子能力（AI 可单独调用）
     ├── _common.py                # 共享层：JSON 契约、mragent 导入、fd 重定向
     ├── mr_pubmed.py              # PubMed 检索 / 论文详情
@@ -93,6 +94,7 @@ mr-agent/
     ├── mr_llm.py                 # LLM 调用（openai / ollama）
     ├── mr_eval.py                # 是否做过 MR 判定 / STROBE-MR 质量评估
     ├── mr_bench.py               # 准确率 / 查准率 / 查全率 / F1 评测
+    ├── mr_smr.py                 # SMR + HEIDI（官方引擎 / 零依赖原生引擎双路径）
     ├── export_results.py         # 结果目录打 ZIP
     ├── edit_csv.py               # 读写三个中间 CSV（人工干预的程序化入口）
     └── serve_web.py              # 拉起上游 Streamlit Web 界面
@@ -100,6 +102,21 @@ mr-agent/
 
 其中 `mr_gwas.py`（离线模式）、`export_results.py`、`edit_csv.py`、`mr_bench.py`
 **不依赖 mragent**，没装环境也能跑；其余需要 Python 3.11/3.12 + mragent。
+`mr_smr.py --engine native` 也是纯标准库（零依赖）；`--engine official` 需要
+官方 `smr` 二进制，用 `fetch-binary` 自动下载或设 `SMR_BIN`。
+
+### 超出上游的部分：SMR / HEIDI
+
+上游 MRAgent 只有 TwoSampleMR（IVW / Egger / weighted median / mode），
+**回答不了"哪个基因介导了这个信号"**。本技能额外内建了 SMR（Summary-data-based MR，
+Zhu et al. 2016 *Nat Genet*）：用 cis-xQTL 作工具变量，检验分子表型是否介导
+SNP→性状的效应，核心产出是 SMR 检验与 HEIDI 检验（区分连锁不平衡 vs 共享因果变异）。
+
+这是**主动扩展而不是复刻上游**，因此与"对齐上游"的部分分开表述。
+两条路径：`--engine official` 驱动官方 `smr` 命令行（功能最全，48 个 flag 已映射，
+另有 `official` 子命令做无遗漏透传）；`--engine native` 是零依赖实现，
+SMR 检验与官方**逐位一致**，HEIDI 的 `p_HEIDI` 小数位有已知差异（已显式标注）。
+详见 [`references/smr.md`](references/smr.md)。
 
 ### 离线 GWAS 清单
 
@@ -160,7 +177,7 @@ python tools/edit_csv.py --dir <run目录> --file mr_run.csv --row 0 --col MRorN
 ## 自检
 
 ```bash
-python scripts/selftest.py            # 95 条用例
+python scripts/selftest.py            # 110 条用例
 python scripts/selftest.py --quick    # 跳过真实网络探测
 python scripts/selftest.py --json     # 输出 JSON，供 CI 消费（失败时退出码 1）
 ```

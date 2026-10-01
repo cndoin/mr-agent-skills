@@ -6,6 +6,9 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ### Added
 
+- Add `tools/mr_smr.py`, a dual-engine SMR / HEIDI toolkit. It drives the official `smr` binary (MIT, Yang lab) with all 48 commonly used flags mapped to their official names plus a lossless `official` pass-through, and it ships a dependency-free native engine whose SMR test matches the official implementation to about six significant digits.
+- Add `references/smr.md` covering input formats, both engines, measured calibration against the official binary, the full flag mapping table, and the known pitfalls.
+- Add `tests/gen_smr_fixture.py`, a deterministic, dependency-free generator for the SMR test dataset, plus self-check group J (13 cases) guarding flag forwarding, failure detection and numeric calibration (97 -> 110).
 - Add native installer destinations for OpenAI Codex and DeepSeek Harness, including `CODEX_HOME` and `DSH_HOME` overrides.
 - Shorten the bilingual skill description for broader compatibility with agent skill catalogs.
 - Document the five supported agents across English, Chinese, Japanese, Spanish, and French getting-started guides.
@@ -19,12 +22,16 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 - Expand credential scanning and regression coverage.
 - Enforce the upstream Python version exclusion for 3.9.7 in preflight.
 - Keep installer backup directory names unique when several targets are installed within the same second, which previously aborted the run with `FileExistsError`; add self-check case H5 (96 -> 97).
+- Detect official `smr` failures that still return exit code 0 (the error is written only to the log) and verify the BESD files were actually produced.
+- Run `make-besd` from the `.flist` directory, because the official binary resolves relative ESD paths against the current working directory; without this, any call from another directory produced a silent false success.
+- Broaden the E5 connectivity assertion to accept the reason in either `error` or `hint`, so the case no longer fails on machines that route localhost through a proxy.
 
 ### Documentation
 
 - Add English as the primary README and provide localized overviews and getting-started guides in Simplified Chinese, Japanese, Spanish, and French.
 - Provide an English security policy and contributing guide.
-- Record that SMR / HEIDI is out of scope because upstream MRAgent has no such feature, keeping the capability surface aligned.
+- Record that SMR / HEIDI is a deliberate capability extension beyond upstream. Upstream MRAgent genuinely has no SMR support (evidence retained in `references/upstream-diff.md` chapter 9), so this is documented as an added feature rather than parity work.
+- Sync the self-check case count (97 -> 110) and the skill version (1.2.0 -> 1.3.0) across the docs.
 
 ## 1.0.0 — 2026-10-01
 

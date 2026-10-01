@@ -7,6 +7,12 @@
 
 ### 新增
 
+- 新增 `tools/mr_smr.py`：**双引擎 SMR / HEIDI 工具**。`--engine official` 驱动官方 `smr` 二进制
+  （Yang lab，MIT），显式映射 **48 个**官方 flag 并提供 `official` 子命令做无遗漏原样透传；
+  `--engine native` 为纯标准库实现，SMR 检验与官方**逐位一致**（约 6 位有效数字）。
+- 新增 `references/smr.md`：输入格式、双引擎、对官方二进制的实测校准、完整参数映射表与常见坑。
+- 新增 `tests/gen_smr_fixture.py`：零依赖、确定性的 SMR 测试数据集生成器；自检新增 J 组 13 条用例，
+  守卫参数转发、假成功防护与数值校准（97 → 110）。
 - 安装器支持 OpenAI Codex 与 DeepSeek Harness，并可通过 `CODEX_HOME` / `DSH_HOME` 自定义技能根目录。
 - 精简中英双语技能描述，提升不同 Agent 技能目录的兼容性。
 - 更新英文、中文、日文、西班牙文、法文的安装指南。
@@ -21,11 +27,18 @@
 - 扩展自检的凭据扫描并增加对应回归用例。
 - 预检遵守上游明确排除 Python 3.9.7 的版本约束。
 - 修复批量安装时同一秒内多个目标的备份目录重名、导致安装中途以 `FileExistsError` 中断的问题；自检新增 H5 回归用例（96 → 97）。
+- 修复官方 `smr` **出错仍返回 exit 0**（错误只写日志）被上报成成功的问题：改为从日志提取 `Error:` 行，并校验 BESD 三件套确实生成。
+- 修复 `make-besd` 未在 `.flist` 所在目录执行的问题：官方按 CWD 解析相对 ESD 路径，从别的工作目录调用会全线报
+  `can not open the file [...] to read.` 却仍 exit 0，属于静默假成功。
+- 放宽 E5 连通性断言：连接失败原因出现在 `error` 或 `hint` 均可，不再因宿主设置 `http_proxy` 而假失败。
 
 ### 文档
 
-- 明确记录 **SMR / HEIDI 不在能力范围内**：上游 MRAgent 本身没有该功能，
-  本技能与之严格对齐，避免被误认为遗漏。见 `references/upstream-diff.md` 第九章与 `SKILL.md` 第 11 条。
+- 重新定位 **SMR / HEIDI**：上游 MRAgent 确实没有该功能（核对依据完整保留在
+  `references/upstream-diff.md` 第九章），但本技能现在**主动内建**，因此文档从
+  "不在能力范围内"改写为"新增能力"，避免把新增能力说成复刻上游。
+  见 `SKILL.md` 第 11 条与 `references/smr.md`。
+- 同步自检用例数（97 → 110）与技能版本号（1.2.0 → 1.3.0）。
 
 ## [1.1.0] — 2026-10-01
 

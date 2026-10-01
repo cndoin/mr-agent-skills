@@ -25,6 +25,8 @@ MR Agent wraps [MRAgent](https://github.com/xuwei1997/MRAgent) in a workflow you
 
 It adds environment checks, isolated run directories, structured command output, result summaries, and tools for reviewing intermediate CSV files. **The statistical methods remain in MRAgent and its R dependencies.**
 
+Beyond upstream, it also ships **SMR (summary-data-based MR) with HEIDI**, which answers a question TwoSampleMR cannot: *which gene mediates this signal?* This is a deliberate capability extension rather than parity work — `--engine official` drives the official `smr` binary with all commonly used flags mapped plus a lossless pass-through, while `--engine native` is a dependency-free implementation whose SMR test matches the official one digit for digit. See [`references/smr.md`](references/smr.md).
+
 ## At a glance
 
 | 🔎 Discover | 🧬 Match | 📈 Analyze | ✅ Review |
@@ -102,6 +104,7 @@ Every real run gets a fresh directory under `mragent-runs/`. A dry run prints th
 | `scripts/summarize_output.py` | Summarize generated CSV and PDF outputs. |
 | `tools/mr_gwas.py` | Search the OpenGWAS catalogue online or from a local cache. |
 | `tools/edit_csv.py` · `tools/export_results.py` | Review intermediate tables and package result files. |
+| `tools/mr_smr.py` | Run SMR and HEIDI through the official `smr` binary or a dependency-free native engine. |
 | More helpers | PubMed, synonyms, LLM calls, evaluation, benchmarking, and the upstream demo. |
 
 ## Requirements

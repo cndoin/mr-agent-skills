@@ -2,7 +2,7 @@
 
 比对时间 **2026-10-01**（第二轮复核）。
 对象：`github.com/xuwei1997/MRAgent` main 分支 + PyPI `mragent==0.2.5`。
-本技能版本：**1.2.0**，自检 **97 条用例全绿**。
+本技能版本：**1.3.0**，自检 **110 条用例全绿**。
 
 ---
 
@@ -264,25 +264,38 @@ $ ls .idea/        → 有（且已被提交）
 | --- | --- |
 | `step_1_test_SimCSE.py` / `step_9_test_SimCSE.py` | 依赖 `SimCSE` 预训练模型（`princeton-nlp/unsup-simcse-*`，下载约 1.3 GB）+ 论文实验标注数据。属于**论文复现环境**而非生产能力。如确需，按上游脚本单独跑即可。 |
 | 生成真实 MR 结果数字 | 本机无 R / 无 Docker / WSL 被拦。预检会如实报阻塞，**不编造任何统计结果**。 |
-| **SMR（Summary-data-based MR）/ HEIDI** | **上游 MRAgent 本身就没有这个功能**，不是本技能的遗漏。见下方说明。 |
 
-### 关于 SMR：不在 MRAgent 的能力范围内
+### 关于 SMR：上游确实没有 —— 本技能**主动补强**（明确定位为新增能力）
 
-**上游 MRAgent 没有 SMR 分析功能，本技能因此也没有** —— 这是能力面对齐，不是遗漏。
+**上游 MRAgent 没有 SMR 分析功能**，这一点已逐处核对确认（依据见本节末）。
+但"上游没有"并不等于"本技能不该有"：SMR 是**分子表型 → 复杂性状**因果定位的
+标准方法，TwoSampleMR 无法回答"哪个基因介导了这个信号"。
 
-SMR（Summary-data-based Mendelian Randomization，Zhu et al. 2016, *Nature Genetics*）
-是 Yang lab（西湖大学）的另一套方法，与 MRAgent 用的 TwoSampleMR **不是同一条技术路线**：
+因此 **1.3.0 起本技能主动内建 SMR 全套能力**（`tools/mr_smr.py`），
+定位是**新增能力**，不是"补齐遗漏"：
 
-| 维度 | MRAgent（TwoSampleMR） | SMR |
+| 维度 | MRAgent（TwoSampleMR） | 本技能的 SMR |
 | --- | --- | --- |
 | 数据输入 | OpenGWAS 上任意暴露 / 结局的 GWAS summary data | 同一套 LD panel 下的 **GWAS summary + 分子 QTL** summary |
-| 分子 QTL | 不需要 | 必须，格式为 `.besd` + `.esi`（Binary eQTL Summary Data） |
-| LD 参考面板 | 由 OpenGWAS API 侧做 `ld_clump` | **必须自备** `.ld` / `.bim` / `.fam`（1000G 或 UKB） |
-| 核心检验 | IVW / MR-Egger / weighted median / simple & weighted mode，外加多效性与异质性检验 | **SMR 检验**（`b_SMR`）+ **HEIDI 检验**（区分连锁不平衡 vs 水平多效性） |
-| 实现 | R 包 `TwoSampleMR` | 独立命令行 **`smr`**（C++），或 R 包 `smr` |
+| 分子 QTL | 不需要 | 必须：`.esd` / `.flist` 文本，或 `.besd` 二进制 |
+| LD 参考面板 | 由 OpenGWAS API 侧做 `ld_clump` | **必须自备** PLINK 三件套（1000G / UKB） |
+| 核心检验 | IVW / MR-Egger / weighted median / simple & weighted mode，外加多效性与异质性检验 | **SMR 检验**（`b_SMR`）+ **HEIDI 检验**（区分连锁不平衡 vs 共享因果变异） |
+| 实现 | R 包 `TwoSampleMR` | 官方 `smr` 命令行（Yang lab，二进制自报 MIT）+ 本技能的纯标准库实现 |
 | 主要用途 | 表型 → 表型 的因果推断 | **基因 / 分子表型 → 复杂疾病** 的因果基因定位 |
 
-逐处核对过的依据：
+实现方式：**官方二进制 + 原生实现双引擎**。
+
+- `--engine official` 驱动官方 `smr`。本技能显式映射 **48 个**官方 flag，
+  并用 `official` 子命令做**无遗漏的原样透传**，因此官方功能（SMR/HEIDI、
+  trans、multi-SNP、omics、MeCS、meta、psmr、locus plot、BESD 制作与查询）
+  不会被包装层截断。自检 J5/J6/J7 守卫这张映射表不会漂移。
+- `--engine native` 纯标准库实现，零外部依赖。SMR 检验与官方**逐位一致**；
+  HEIDI 为独立实现 —— `nsnp_HEIDI` 与官方一致，`p_HEIDI` 小数位有差异
+  （官方未公开 HEIDI 的精确方差构造，本技能穷举 24+ 种组合仍无法精确反推）。
+  这一差异在 `references/smr.md` 与自检里都**显式标注，不假装一致**。
+- 校准数据、数据格式、48 条参数映射与常见坑：见 `references/smr.md`。
+
+**"上游没有"的核对依据**：
 
 - 上游 `mragent/agent_tool.py` 只有三个分析函数：
   `MRtool`（标准 TwoSampleMR，第 261 行）、`MRtool_MOE`（第 386 行）、
@@ -293,17 +306,16 @@ SMR（Summary-data-based Mendelian Randomization，Zhu et al. 2016, *Nature Gene
 - 全仓库搜 `SMR`，仅命中 `opengwas.csv` 里的 `eQTLGen` 等**数据集名称**，
   以及 `STROBE_MR`（MR 报告规范，与 SMR 无关）。
 
-**若确需 SMR**，那是**新增能力**而非"补齐遗漏"，需要：装 `smr` 命令行工具 +
-下载 1000G LD reference + 取得 `.besd` 格式的 QTL 数据（如 eQTLGen / GTEx 转换版）。
-可作为独立工具（例如 `tools/mr_smr.py`）另行扩展，与本技能"复刻上游"的定位分开。
-
 ---
 
 ## 十、验证证据
 
 | 验证 | 结果 |
 | --- | --- |
-| 自检用例 | **97 条，全绿** —— 工作区与 5 个安装位（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）各跑一遍 |
+| 自检用例 | **110 条，全绿** —— 工作区与 5 个安装位（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）各跑一遍 |
+| SMR 数值对官方金标准 | native 引擎 `b_SMR` / `se_SMR` / `p_SMR` 与官方 `smr` 1.3.1 **一致到约 6 位有效数字**，`nsnp_HEIDI` 精确一致（自检 J10/J12） |
+| SMR 参数无静默丢弃 | `analyze` 暴露的 **48 个** flag 逐个断言能翻译成官方 flag，且翻译表无死条目（自检 J5/J6/J7） |
+| SMR 假成功防护 | 官方出错仍 exit 0，本工具改为「日志提 `Error:` 行 + 校验 BESD 三件套真的生成」（自检 J11） |
 | 主模板与上游逐字一致 | **10/10 一致**（自检 I2，AST 解析比对） |
 | `mr_llm` 线上请求形状 | 本地起 OpenAI 兼容 mock 服务真发请求：路径 / Bearer / `seed=42` / system prompt 全部与上游一致（自检 I9） |
 | `mr_synonyms` 真实 UMLS | 假 key → 真实返回 **HTTP 401**，被转成结构化错误 |

@@ -1,14 +1,14 @@
 ---
 name: mr-agent
-description: "Orchestrate Mendelian randomization (MR) research with MRAgent: discover exposure-outcome candidates in PubMed, select OpenGWAS instruments, run TwoSampleMR, and review reports. Use for MR causal inference, GWAS, MRAgent, OpenGWAS, TwoSampleMR, MRlap, MR-MOE, or STROBE-MR tasks. 适用于孟德尔随机化、MR 因果推断、GWAS、暴露结局发现与结果解读；编排 PubMed、OpenGWAS 和 TwoSampleMR 工作流，不替代专业统计判断。"
+description: "Orchestrate Mendelian randomization (MR) research with MRAgent: discover exposure-outcome candidates in PubMed, select OpenGWAS instruments, run TwoSampleMR, and review reports. Use for MR causal inference, GWAS, MRAgent, OpenGWAS, TwoSampleMR, MRlap, MR-MOE, SMR/HEIDI, or STROBE-MR tasks. 适用于孟德尔随机化、MR 因果推断、SMR/HEIDI、GWAS、暴露结局发现与结果解读；编排 PubMed、OpenGWAS 和 TwoSampleMR 工作流，不替代专业统计判断。"
 license: MIT
 compatibility: "CI 已验证 Python 3.11/3.12；预检接受 3.9–3.12（上游排除 3.9.7），但 3.9/3.10 未纳入 CI，3.13+ 当前拦截。完整运行还需 R > 4.3.4、mragent 包与 OpenGWAS JWT。缺依赖时预检会报告阻塞项；未装 mragent 时离线检索 / 打包 / CSV 编辑 / 评测工具仍可运行。"
 allowed-tools: "Bash, Read, Write, Edit, Grep, Glob, WebFetch, WebSearch, TodoWrite"
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   author: 寇豆码
   category: bioinformatics
-  tags: [mendelian-randomization, causal-inference, gwas, opengwas, twosamplemr, mragent, strobe-mr, epidemiology, bioinformatics]
+  tags: [mendelian-randomization, causal-inference, gwas, opengwas, twosamplemr, smr, heidi, mragent, strobe-mr, epidemiology, bioinformatics]
 ---
 
 # MRAgent · 孟德尔随机化因果发现
@@ -72,13 +72,25 @@ metadata:
     并使用包内硬编码的作者 key；当前 API 不支持注入用户自己的 key。
     独立工具 `tools/mr_synonyms.py` 只接受用户自己的 UMLS key。
 
-11. **本技能不含 SMR / HEIDI，这是故意的。**
-    SMR（Summary-data-based MR）是 TwoSampleMR 之外的另一套方法学，
-    需要 `.besd` 格式的 QTL 数据 + 自备 LD reference panel + `smr` 命令行工具。
-    上游 MRAgent **本身就没有** SMR 功能（`agent_tool.py` 只有 `MRtool` /
-    `MRtool_MOE` / `MRtool_MRlap` 三个分析函数），本技能的能力面与之严格对齐。
-    被问到 SMR 时如实回答"上游与本技能都不提供"，
-    **不要拿 TwoSampleMR 冒充 SMR**。详见 `references/upstream-diff.md` 第九章。
+11. **SMR / HEIDI 已内建（`tools/mr_smr.py`），这是"主动补强"而非"复刻上游"。**
+    SMR（Summary-data-based MR，Zhu et al. 2016 *Nat Genet*）是 TwoSampleMR 之外的
+    另一套方法学：用 cis-xQTL 作工具变量，检验**分子表型是否介导了 SNP→性状的效应** ——
+    TwoSampleMR 回答不了"哪个基因介导了这个信号"，SMR 可以。
+    上游 MRAgent **本身没有**这个功能（`agent_tool.py` 只有 `MRtool` /
+    `MRtool_MOE` / `MRtool_MRlap`），本技能在此**主动扩展**，上游差分依据见
+    `references/upstream-diff.md` 第九章，用法详见 `references/smr.md`。
+    两条路径：
+    - `--engine official`：驱动官方 `smr` 命令行（Yang lab，二进制自报 MIT）。
+      功能最全（SMR/HEIDI、trans 区域、multi-SNP、omics/双分子性状、MeCS、
+      meta、psmr、locus plot、BESD 制作与查询），数值与已发表结果一致。
+      首次用先 `fetch-binary` 下载，或设 `SMR_BIN`。
+      **未在本工具显式列出的官方 flag，用 `--raw "..."` 或 `official`
+      子命令原样透传**，因此官方功能不会被包装层截断。
+    - `--engine native`：纯标准库实现，零外部依赖。SMR 检验与官方**逐位一致**
+      （自检 J10/J12 对官方金标准断言）；HEIDI 为独立实现，`nsnp_HEIDI` 与官方
+      一致但 `p_HEIDI` 小数位有差异 —— 需与已发表数字严格对齐时用 `official`。
+    **不要拿 TwoSampleMR 冒充 SMR。**
+    ⚠️ 官方二进制**出错时仍可能 exit 0**（错误只写日志），判成败必须看日志与产物。
 
 ## 运行规则
 
@@ -230,6 +242,7 @@ agent.run(step=[1,2,3,4,5,6,7,8,9,10])
 | `mr_pubmed.py` | `pubmed_crawler` / `get_paper_details` | `--keyword "back pain" --num 20` |
 | `mr_gwas.py` | `check_keyword_in_opengwas` / `get_gwas_id` | `--keyword "body mass index"`（默认离线，不需 mragent） |
 | `mr_synonyms.py` | `get_synonyms`（UMLS） | `--term "body mass index"`（需自己的 `UMLS_API_KEY`） |
+| `mr_smr.py` | **无（本技能新增）** | `analyze --engine native --bfile ref --gwas g.ma --esd x.esd`（SMR + HEIDI；零依赖） |
 | `mr_llm.py` | `llm_chat` / `openai_gpt` / `ollama_chat` | `--prompt "..." --model gpt-4o` |
 | `mr_eval.py` | `outcome_exposure_MRorNot` / `STROBE_MR` | `--mrornot --outcome X --exposure Y` |
 | `mr_bench.py` | `step_2_test` / `step_5_test` | `--file a.csv --gt MRorNot --pred MRorNot_gpt-4o --mode accuracy` |
@@ -243,11 +256,15 @@ agent.run(step=[1,2,3,4,5,6,7,8,9,10])
 `mr_pubmed` / `mr_synonyms` / `mr_llm` / `mr_gwas` 的离线模式 / `mr_prompt` /
 `export_results` / `edit_csv` / `mr_bench` **在没装 mragent 的机器上也能跑**。
 
+`mr_smr.py` 分两条路径：`--engine native` 是纯标准库（零依赖，SMR 检验与官方逐位一致），
+`--engine official` 需要官方 `smr` 二进制（`fetch-binary` 自动下载，或设 `SMR_BIN`）。
+
 ## 参考文件
 
 - `references/api.md` —— 实测得到的 API 速查（真实签名，非 README 转述）
 - `references/environment.md` —— Python / R / token 完整搭建与验证命令
 - `references/pitfalls.md` —— 从源码里挖出来的坑位清单
+- `references/smr.md` —— SMR / HEIDI 的数据格式、双引擎、官方校准实测与 48 条参数映射
 - `references/upstream-diff.md` —— **上游仓库 vs PyPI 包 vs 本技能**的逐项能力对照
 - `scripts/preflight.py` —— 环境预检，输出 JSON
 - `scripts/run_mr.py` —— 统一运行入口（独立工作目录 + 日志捕获 + 静默失败捕获）
@@ -291,7 +308,7 @@ python install.py --target deepseek
 ## 自检
 
 ```bash
-python scripts/selftest.py          # 全量，97 条用例
+python scripts/selftest.py          # 全量，110 条用例
 python scripts/selftest.py --quick  # 跳过真实网络探测
 python scripts/selftest.py --json   # 输出 JSON，失败时退出码 1（可直接接 CI）
 ```

@@ -48,7 +48,7 @@
 ## 开发流程
 
 ```bash
-python scripts/selftest.py          # 全量自检（81 条）
+python scripts/selftest.py          # 全量自检（110 条）
 python scripts/selftest.py --quick  # 只跑不依赖 mragent 的用例
 python install.py --target all      # 装到 Claude Code + WorkBuddy 并冒烟
 ```
