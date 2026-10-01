@@ -21,6 +21,7 @@ import argparse
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -89,6 +90,21 @@ def skip(name, why, group=""):
     RESULTS.append({"case": name, "group": group, "ok": True, "exit": "-",
                     "detail": "SKIP: " + why})
     print("[SKIP] %-40s %s" % (name, why))
+
+
+def doc_ok(name, cond, detail="", group="K"):
+    """纯文件系统断言：不起子进程，不解析 JSON。
+
+    文档类用例没有 stdout 可解析，走 case() 会被 must_json 判死，
+    所以单列一个轻量入口。
+    """
+    ok = bool(cond)
+    RESULTS.append({"case": name, "group": group, "ok": ok, "exit": "-",
+                    "detail": "" if ok else detail})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", name,
+                             "" if ok else "-> " + detail))
+    return ok
+
 
 
 def mkrun(base, name, files):
@@ -958,6 +974,44 @@ def group_j(base):
               "--out", os.path.join(fix, "native_out")],
              0, env={"SMR_BIN": ""}, check=_golden, group="J")
 
+    # J14 下载请求必须带非默认 UA。官方下载站的 WAF 对 urllib 默认 UA
+    #     （Python-urllib/3.x）直接回 403 Forbidden，换浏览器 UA 立刻 200。
+    #     这个缺陷原先只有真联网才会暴露，所以离线也要把请求头钉住。
+    def _j14():
+        req = mod.download_request("https://example.invalid/x.zip")
+        hdr = req.headers or {}
+        ua = hdr.get("User-agent") or hdr.get("User-Agent") or ""
+        return bool(ua) and "urllib" not in ua.lower() and ua == mod.DOWNLOAD_UA
+    doc_ok("J14 下载请求带浏览器 UA", _j14(),
+           "download_request() 未带非默认 UA —— 官方下载站会直接回 403",
+           group="J")
+
+    # J15 拿同一请求头向真实下载站发一个 1 字节 Range 请求，确认真的被放行。
+    #     J14 只能证明"请求头写对了"，证明不了"服务端认"。
+    if QUICK:
+        skip("J15 官方下载站放行该请求头", "--quick 跳过网络探测", group="J")
+    else:
+        def _j15():
+            import urllib.request
+            k = mod.platform_key()
+            rel = mod.SMR_RELEASES.get(k) or mod.SMR_RELEASES.get((k[0], k[1]))
+            if not rel:
+                return None
+            req = mod.download_request(rel[1], {"Range": "bytes=0-0"})
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                return resp.status in (200, 206)
+        try:
+            _v = _j15()
+        except Exception as exc:
+            _v = False
+            print("      J15 异常: %s: %s" % (type(exc).__name__, exc))
+        if _v is None:
+            skip("J15 官方下载站放行该请求头", "当前平台没有官方预编译包", group="J")
+        else:
+            doc_ok("J15 官方下载站放行该请求头", _v,
+                   "带浏览器 UA 的请求仍被拒 —— 下载域名、UA 策略或网络可能已变",
+                   group="J")
+
     # J11 / J12 需要官方二进制：没有就 SKIP（而不是假失败）
     binpath = mod.find_smr(None)
     if not binpath:
@@ -990,6 +1044,114 @@ def group_j(base):
          group="J")
 
 
+# ------------------------------------------------------------------ K
+# 多语言文档一致性。加这一组的原因很具体：SMR 段落曾经只同步了英文和简体中文，
+# 日 / 西 / 法三份概览静默掉队，而没有任何用例看得出来。文档漂移必须能被测出来。
+LANGS = ["", ".zh-CN", ".ja", ".es", ".fr"]
+DOCLANGS = ["en", "zh-CN", "ja", "es", "fr"]
+
+
+def read(rel):
+    """读仓库内文件；不存在返回 None（安装位可能裁剪过文件）。"""
+    p = os.path.join(SKILL_ROOT, rel)
+    if not os.path.exists(p):
+        return None
+    return io.open(p, encoding="utf-8").read()
+
+
+def group_k():
+    # K1 五份 README 都必须提到 SMR
+    missing = []
+    for sfx in LANGS:
+        s = read("README%s.md" % sfx)
+        if s is None:
+            missing.append("README%s.md 不存在" % sfx)
+        elif "SMR" not in s:
+            missing.append("README%s.md 未提及 SMR" % sfx)
+    doc_ok("K1 五语言 README 均含 SMR", not missing, "; ".join(missing))
+
+    # K2 README 里的 smr.md 链接必须解析得到真实文件
+    bad = []
+    for sfx in LANGS:
+        s = read("README%s.md" % sfx) or ""
+        for t in re.findall(r"\]\(([^)]*smr\.md)\)", s):
+            if not os.path.exists(os.path.join(SKILL_ROOT, t)):
+                bad.append("README%s.md -> %s" % (sfx, t))
+    doc_ok("K2 README 的 smr.md 链接可解析", not bad, "; ".join(bad))
+
+    # K3 五份 getting-started 都必须有 SMR 章节
+    missing = []
+    for lg in DOCLANGS:
+        s = read("docs/%s/getting-started.md" % lg)
+        if s is None:
+            missing.append("docs/%s/getting-started.md 不存在" % lg)
+        elif "SMR / HEIDI" not in s:
+            missing.append("docs/%s 缺 SMR / HEIDI 章节" % lg)
+    doc_ok("K3 五语言 getting-started 均有 SMR 章节", not missing, "; ".join(missing))
+
+    # K4 docs 在子目录里，相对路径必须是 ../../references/smr.md
+    bad = []
+    for lg in DOCLANGS:
+        s = read("docs/%s/getting-started.md" % lg) or ""
+        for t in re.findall(r"\]\(([^)]*smr\.md)\)", s):
+            target = os.path.normpath(os.path.join(SKILL_ROOT, "docs", lg, t))
+            if not t.startswith("../../") or not os.path.exists(target):
+                bad.append("docs/%s -> %s" % (lg, t))
+    doc_ok("K4 docs 的 smr.md 相对路径正确", not bad, "; ".join(bad))
+
+    # K5 全仓库 markdown 里指向 smr.md 的链接都不是死链
+    bad = []
+    for root, dirs, files in os.walk(SKILL_ROOT):
+        dirs[:] = [d for d in dirs
+                   if d not in (".git", "mragent-runs", "__pycache__",
+                                ".pytest_cache", ".mypy_cache")]
+        for fn in files:
+            if not fn.endswith(".md"):
+                continue
+            p = os.path.join(root, fn)
+            try:
+                s = io.open(p, encoding="utf-8").read()
+            except Exception:
+                continue
+            for t in re.findall(r"\]\(([^)#?]*smr\.md)\)", s):
+                if not os.path.exists(os.path.normpath(os.path.join(root, t))):
+                    bad.append("%s -> %s" % (os.path.relpath(p, SKILL_ROOT), t))
+    doc_ok("K5 全仓库 smr.md 链接无死链", not bad, "; ".join(bad))
+
+
+# 声明过用例数的文件。CHANGELOG 刻意排除：它记录的是"当时是多少"，
+# 历史条目本来就不该跟着变。
+COUNT_FILES = ["Makefile", "CONTRIBUTING.zh-CN.md", "README.zh-CN.md", "SKILL.md",
+               "references/upstream-diff.md"]
+COUNT_RE = re.compile(r"(\d+)\s*条(?:自检用例|用例|，|\))")
+
+
+def doc_case_count():
+    """K6：文档声明的用例数必须等于实际用例数。
+
+    这个数字历史上漂移过三次（81 / 81 / 95 各留了一处），
+    所以值得用一条用例钉住。必须在所有分组跑完之后调用。
+    """
+    expected = len(RESULTS) + 1          # 加上本用例自身
+    found, bad, seen = {}, [], False
+    for rel in COUNT_FILES:
+        s = read(rel)
+        if s is None:
+            continue
+        seen = True
+        for n in COUNT_RE.findall(s):
+            found.setdefault(int(n), []).append(rel)
+    for n, where in sorted(found.items()):
+        if n != expected:
+            bad.append("%s 声明 %d，实际 %d" % (sorted(set(where))[0], n, expected))
+    if not seen:
+        skip("K6 文档用例数声明一致", "未找到任何声明用例数的文件", group="K")
+        return
+    if not found:
+        bad.append("在 %s 中未找到 'N 条' 形式的用例数声明" % ", ".join(COUNT_FILES))
+    doc_ok("K6 文档用例数声明一致", not bad, "; ".join(bad))
+
+
 def main():
     ap = argparse.ArgumentParser(description="mr-agent 全量自检")
     ap.add_argument("--quick", action="store_true", help="跳过真实网络探测")
@@ -1011,6 +1173,8 @@ def main():
         group_h()
         group_i()
         group_j(base)
+        group_k()
+        doc_case_count()
     finally:
         shutil.rmtree(base, ignore_errors=True)
 

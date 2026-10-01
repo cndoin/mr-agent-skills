@@ -85,7 +85,7 @@ mr-agent/
 │   ├── preflight.py              # 环境预检 → 结构化 JSON
 │   ├── run_mr.py                 # 统一运行入口（独立目录 + 日志捕获 + 静默失败捕获）
 │   ├── summarize_output.py       # 解析 output/ → 结构化摘要
-│   └── selftest.py               # 110 条自检用例
+│   └── selftest.py               # 118 条自检用例
 └── tools/                        # 原子能力（AI 可单独调用）
     ├── _common.py                # 共享层：JSON 契约、mragent 导入、fd 重定向
     ├── mr_pubmed.py              # PubMed 检索 / 论文详情
@@ -177,7 +177,7 @@ python tools/edit_csv.py --dir <run目录> --file mr_run.csv --row 0 --col MRorN
 ## 自检
 
 ```bash
-python scripts/selftest.py            # 110 条用例
+python scripts/selftest.py            # 118 条用例
 python scripts/selftest.py --quick    # 跳过真实网络探测
 python scripts/selftest.py --json     # 输出 JSON，供 CI 消费（失败时退出码 1）
 ```

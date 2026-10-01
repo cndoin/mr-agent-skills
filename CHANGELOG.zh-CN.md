@@ -3,7 +3,41 @@
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)，
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [未发布]
+## 1.3.1 — 2026-10-01
+
+### 新增
+
+- 自检新增 **J14 / J15 两条用例**，把「下载请求必须带浏览器 UA」钉死：J14 离线断言请求头，J15 真发一个 1 字节 Range 请求确认服务端真的放行 —— 只用离线断言证明不了服务端认这个头。
+- 自检新增 **K 组 6 条用例**，守卫多语言文档一致性：五份 README 都必须提及 SMR、
+  五份 getting-started 都必须有 SMR / HEIDI 章节、所有 `smr.md` 链接都必须解析得到
+  真实文件，且文档里声明的用例数必须等于实际执行的用例数。加这一组的原因很具体 ——
+  SMR 段落曾经只同步了英文和简体中文，日 / 西 / 法三份概览静默掉队，
+  而当时没有任何用例看得出来。
+
+### 修复
+
+- **修复 `fetch-binary` 无法下载官方二进制**：官方下载站的 WAF 会拒绝 urllib 的默认
+  UA（`Python-urllib/3.x`）并返回 `HTTP 403 Forbidden`，换浏览器 UA 立刻 `200`。
+  原先 `download_binary()` 用裸 `urlopen(url)`，因此 `fetch-binary` 必然失败。
+  现在统一走 `download_request()` 显式携带 UA。实测同一 URL 同一 shell：
+  默认 UA 403，浏览器 UA 200 / 2171140 字节。
+- 修正 getting-started 指南里被粘连到上一行的列表条目。
+- 修正 `docs/zh-CN/getting-started.md` 中 `references/smr.md` 的相对路径，
+  原先少了 `../../`，指向一个不存在的位置。
+- 修正五份 getting-started 指南中 `fetch-binary --out ./smr-bin` 的错误示例 ——
+  `fetch-binary` 不接受任何参数（固定解压到全局缓存），该命令会被 argparse 拒绝。
+
+- 修正 `docs/zh-CN/getting-started.md` 中 `references/smr.md` 的相对路径，
+  原先少了 `../../`，指向一个不存在的位置。
+
+### 文档
+
+- 补齐日文、西班牙文、法文 README 的 SMR / HEIDI 段落 —— 此前这三份只覆盖工作流本身。
+- 五份 getting-started 指南全部新增 SMR / HEIDI 操作步骤（取二进制、preflight、双引擎），
+  并在 `docs/README.md` 索引中登记 `references/smr.md`。
+- 同步自检用例数（110 → 118）与技能版本号（1.3.0 → 1.3.1）。
+
+## 1.3.0 — 2026-10-01
 
 ### 新增
 

@@ -2,7 +2,29 @@
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) format.
 
-## Unreleased
+## 1.3.1 — 2026-10-01
+
+### Added
+
+- Add self-check cases J14 / J15 to pin down "the download request must carry a browser UA": J14 asserts the header offline, and J15 issues a real 1-byte range request to confirm the server actually accepts it -- an offline assertion alone cannot prove the server honours the header.
+- Add self-check group K (6 cases) guarding multi-language documentation consistency: every README must mention SMR, every getting-started guide must carry the SMR / HEIDI section, every `smr.md` link must resolve to a real file, and the case count declared in the docs must equal the number actually executed. The trigger was concrete: the SMR section had been synced into English and Simplified Chinese only, while the Japanese, Spanish, and French overviews silently fell behind with no case able to detect it.
+
+### Fixed
+
+- **Fix `fetch-binary` being unable to download the official binary**: the download site's WAF rejects urllib's default UA (`Python-urllib/3.x`) with `HTTP 403 Forbidden`, while a browser UA returns `200` immediately. `download_binary()` previously called bare `urlopen(url)`, so `fetch-binary` could never succeed. Requests now go through `download_request()`, which sets the UA explicitly. Measured on the same URL in the same shell: default UA 403, browser UA 200 / 2171140 bytes.
+- Split list items that had been glued onto the previous line in the getting-started guides.
+- Correct the relative path of the `references/smr.md` link in `docs/zh-CN/getting-started.md`, which was missing `../../` and pointed at a location that does not exist.
+- Correct the `fetch-binary --out ./smr-bin` example in all five getting-started guides: `fetch-binary` accepts no arguments (it always extracts into the global cache), so that command is rejected by argparse.
+
+- Correct the relative path of the `references/smr.md` link in `docs/zh-CN/getting-started.md`, which was missing `../../` and pointed at a location that does not exist.
+
+### Documentation
+
+- Complete the SMR / HEIDI sections in the Japanese, Spanish, and French READMEs, which previously covered the workflow only.
+- Add an SMR / HEIDI walkthrough (fetch the binary, preflight, both engines) to all five getting-started guides and index `references/smr.md` in `docs/README.md`.
+- Sync the self-check case count (110 -> 118) and the skill version (1.3.0 -> 1.3.1).
+
+## 1.3.0 — 2026-10-01
 
 ### Added
 
