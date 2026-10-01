@@ -17,7 +17,7 @@
 python install.py --target all
 ```
 
-可用 `--target claude`、`--target workbuddy` 或 `--target codebuddy` 选择目标。`python install.py --list` 只检查技能元数据，不安装。
+可用 `--target claude`、`workbuddy`、`codebuddy`、`codex` 或 `deepseek` 选择目标。Codex 默认安装到 `~/.codex/skills/mr-agent`，DeepSeek Harness 默认安装到 `~/.dsh/skills/mr-agent`；分别设置 `CODEX_HOME` / `DSH_HOME` 可自定义根目录。`python install.py --list` 会验证元数据并显示目标路径，不执行安装。
 
 ## 配置环境
 

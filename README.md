@@ -47,12 +47,16 @@ The workflow is designed to pause after literature discovery so you can review c
 
 ### 1. Install the skill
 
-The installer copies the skill into supported agent skill directories. It does not install Python, R, or MRAgent dependencies.
+One portable `SKILL.md` works across **Claude Code, WorkBuddy, CodeBuddy, OpenAI Codex, and DeepSeek Harness**. The installer puts it in each agent's native skill directory; it does not install Python, R, or MRAgent dependencies.
 
 ```bash
 python install.py --target all
 python install.py --list
 ```
+
+Install just one agent with `--target codex` or `--target deepseek`. Codex uses
+`$CODEX_HOME/skills/mr-agent` (default `~/.codex/skills/mr-agent`); DeepSeek Harness
+uses `$DSH_HOME/skills/mr-agent` (default `~/.dsh/skills/mr-agent`).
 
 You can also install it manually. Platform notes and all supported languages are in the [getting-started guides](docs/README.md).
 
@@ -106,6 +110,16 @@ Every real run gets a fresh directory under `mragent-runs/`. A dry run prints th
 - **R 4.3.4 or later**, plus the packages in the [English environment guide](references/en/environment.md).
 - For a complete MR run: the upstream `mragent` package, an LLM backend, an OpenGWAS JWT, and network access to the selected services.
 - Windows, macOS, and Linux are supported for helper tools. A full MR run also depends on the upstream R setup.
+
+### Optional: use DeepSeek for MRAgent's internal LLM
+
+The agent running this skill (Codex or DeepSeek Harness) is configured separately from the LLM that MRAgent calls during analysis. MRAgent accepts OpenAI-compatible endpoints; set `MRAGENT_AI_KEY` in your environment and pass the model and endpoint to the runner:
+
+```bash
+python scripts/run_mr.py --mode O --outcome "back pain" --steps 1,2 --llm-model deepseek-flash --base-url https://api.deepseek.com
+```
+
+Check the current model name and API compatibility with [DeepSeek's API documentation](https://api-docs.deepseek.com/guides/agent_integrations/opencode). Never put an actual key in a command, source file, or issue report.
 
 ## Safety and scientific scope
 

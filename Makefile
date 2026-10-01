@@ -14,7 +14,7 @@ help:  ## 显示本帮助
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ---------------------------------------------------------------- 测试
-test:  ## 全量自检（80 条用例，含真实网络探测）
+test:  ## 全量自检（81 条用例，含真实网络探测）
 	$(PY) scripts/selftest.py
 
 test-quick:  ## 快速自检（跳过网络探测，离线也能跑完）
@@ -24,7 +24,7 @@ preflight:  ## 环境预检（本机能不能真跑 MR，看这个）
 	$(PY) scripts/preflight.py
 
 # ---------------------------------------------------------------- 安装
-install:  ## 装到所有 Agent（Claude Code / WorkBuddy / CodeBuddy）
+install:  ## 装到所有 Agent（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）
 	$(PY) install.py --target all
 
 install-claude:  ## 只装 Claude Code

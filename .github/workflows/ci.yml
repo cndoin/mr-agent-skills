@@ -37,7 +37,7 @@ jobs:
       - name: 全量自检
         run: python scripts/selftest.py --quick
 
-      - name: SKILL.md frontmatter 合规（Claude Code / WorkBuddy 双端）
+      - name: SKILL.md frontmatter 与 Agent 安装目标合规
         run: python install.py --list
 
       - name: 各脚本可独立执行

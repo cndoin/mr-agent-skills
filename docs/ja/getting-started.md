@@ -17,7 +17,7 @@
 python install.py --target all
 ```
 
-`--target claude`、`--target workbuddy`、`--target codebuddy` で対象を選べます。`python install.py --list` はインストールせずメタデータを検証します。
+`--target claude`、`workbuddy`、`codebuddy`、`codex`、`deepseek` で対象を選べます。Codex の既定先は `~/.codex/skills/mr-agent`、DeepSeek Harness は `~/.dsh/skills/mr-agent` です。`CODEX_HOME` / `DSH_HOME` でルートを変更できます。`python install.py --list` はインストールせずメタデータと保存先を確認します。
 
 ## 環境を準備
 

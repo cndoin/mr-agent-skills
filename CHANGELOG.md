@@ -4,6 +4,12 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## Unreleased
 
+### Added
+
+- Add native installer destinations for OpenAI Codex and DeepSeek Harness, including `CODEX_HOME` and `DSH_HOME` overrides.
+- Shorten the bilingual skill description for broader compatibility with agent skill catalogs.
+- Document the five supported agents across English, Chinese, Japanese, Spanish, and French getting-started guides.
+
 ### Fixed
 
 - Reject invalid or repeated step numbers; keep dry runs from creating run directories; allocate a fresh directory for each real run.

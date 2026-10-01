@@ -38,7 +38,7 @@ UPSTREAM_CSV_URL = ("https://raw.githubusercontent.com/xuwei1997/MRAgent/"
 _HERE = os.path.dirname(os.path.abspath(__file__))
 # 全局缓存：install.py 会把清单下到这里。放在 $HOME 下而不是 skill 目录里，
 # 一是 10 MB 的第三方数据不该进 git 仓库（见 .gitignore / NOTICE），
-# 二是多个安装位置（Claude Code / WorkBuddy / CodeBuddy）可以共用一份。
+# 二是多个安装位置（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）可以共用一份。
 GLOBAL_CACHE = os.path.join(os.path.expanduser("~"), ".cache", "mr-agent",
                             "opengwas.csv")
 DEFAULT_CSV_PATHS = [

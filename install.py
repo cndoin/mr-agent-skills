@@ -7,13 +7,15 @@
     python install.py --target claude       # 只装 Claude Code
     python install.py --target workbuddy    # 只装 WorkBuddy
     python install.py --target codebuddy    # 只装 CodeBuddy
+    python install.py --target codex        # 只装 OpenAI Codex
+    python install.py --target deepseek     # 只装 DeepSeek Harness
     python install.py --list                # 只看会被装到哪，不装
 
 契约与其他脚本一致：stdout 只有一个 JSON，提示走 stderr。
 零第三方依赖 —— 只用标准库，所以任何 Python 3.8+ 都能跑安装。
 
 为什么需要这个脚本：
-    不同 Agent 的技能目录不同（~/.claude/skills、~/.workbuddy/skills …），
+    不同 Agent 的技能目录不同（~/.claude/skills、~/.codex/skills …），
     而且 opengwas.csv（10 MB）不该进 git 仓库（见 .gitignore / NOTICE），
     得由安装阶段下载到全局缓存 —— 两者手工做都容易漏。
 """
@@ -47,10 +49,14 @@ EXCLUDE = {".git", "__pycache__", "output", "mragent-runs", "opengwas.csv",
 def targets():
     """各 Agent 的技能目录。目录不存在不代表 Agent 没装 —— 所以都列出。"""
     home = os.path.expanduser("~")
+    codex_home = os.path.expanduser(os.environ.get("CODEX_HOME") or os.path.join(home, ".codex"))
+    dsh_home = os.path.expanduser(os.environ.get("DSH_HOME") or os.path.join(home, ".dsh"))
     return {
         "claude": os.path.join(home, ".claude", "skills", SKILL_NAME),
         "workbuddy": os.path.join(home, ".workbuddy", "skills", SKILL_NAME),
         "codebuddy": os.path.join(home, ".codebuddy", "skills", SKILL_NAME),
+        "codex": os.path.join(codex_home, "skills", SKILL_NAME),
+        "deepseek": os.path.join(dsh_home, "skills", SKILL_NAME),
     }
 
 
@@ -88,7 +94,7 @@ def parse_frontmatter(path):
 
 
 def validate_frontmatter(path):
-    """校验 SKILL.md 的 frontmatter 是否满足 Claude Code 与 WorkBuddy 的共同要求。"""
+    """校验可移植技能 frontmatter 的共同要求。"""
     problems = []
     data, err = parse_frontmatter(path)
     if err:
@@ -98,7 +104,7 @@ def validate_frontmatter(path):
         problems.append("缺少 name")
     else:
         name = data["name"]
-        # Claude Code 的硬性限制：小写字母数字与连字符，最长 64
+        # Codex、Claude Code、DeepSeek Harness 均使用小写 kebab-case 技能名。
         ok_chars = all(c.isalnum() or c == "-" for c in name)
         if not ok_chars or name != name.lower():
             problems.append("name 必须是小写字母/数字/连字符: %r" % name)
@@ -222,7 +228,7 @@ def smoke(dst):
 def main():
     ap = argparse.ArgumentParser(description="安装 mr-agent 技能到各 Agent 目录")
     ap.add_argument("--target", default="all",
-                    help="安装目标，可用逗号分隔（如 claude,workbuddy），默认 all")
+                    help="安装目标，可用逗号分隔（如 codex,deepseek），默认 all")
     ap.add_argument("--list", action="store_true", help="只列目标路径，不安装")
     ap.add_argument("--dry-run", action="store_true", help="演练，不写盘")
     ap.add_argument("--no-fetch", action="store_true", help="不下载离线 GWAS 清单")

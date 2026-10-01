@@ -17,7 +17,7 @@ L’installateur copie uniquement les fichiers de la compétence ; il n’instal
 python install.py --target all
 ```
 
-Choisissez `claude`, `workbuddy` ou `codebuddy` avec `--target`. `python install.py --list` vérifie les métadonnées sans installer.
+Choisissez `claude`, `workbuddy`, `codebuddy`, `codex` ou `deepseek` avec `--target`. Codex utilise par défaut `~/.codex/skills/mr-agent` et DeepSeek Harness `~/.dsh/skills/mr-agent` ; `CODEX_HOME` et `DSH_HOME` permettent de modifier ces chemins. `python install.py --list` vérifie les métadonnées et affiche les destinations sans installer.
 
 ## Préparer l’environnement
 

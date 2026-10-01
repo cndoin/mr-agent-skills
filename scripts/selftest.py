@@ -9,7 +9,7 @@
 设计要点：
 
 1. **全部用 __file__ 定位**，不硬编码任何绝对路径 —— 从工作区跑、从
-   ~/.claude/skills 跑、从 ~/.workbuddy/skills 跑，结果都一样。
+   ~/.claude/skills、~/.codex/skills 或 ~/.dsh/skills 跑，结果都一样。
 2. **解释器用 sys.executable**，不写死路径。注意这不等于要求 3.12：
    本自检验证的是「脚本的契约与降级行为」，完整 MR 需要 3.11/3.12 的
    另一个环境（preflight 会报出来）。
@@ -496,6 +496,28 @@ def group_h():
         RESULTS.append({"case": "H3 安装排除第三方清单", "group": "H",
                         "ok": False, "exit": 0, "detail": str(exc)})
         print("[FAIL] H3 安装排除第三方清单 %s" % exc)
+
+    # Codex / DeepSeek Harness 的安装根目录可配置，且默认路径稳定。
+    old = {key: os.environ.get(key) for key in ("CODEX_HOME", "DSH_HOME")}
+    try:
+        os.environ["CODEX_HOME"] = os.path.join(SKILL_ROOT, ".test-codex-home")
+        os.environ["DSH_HOME"] = os.path.join(SKILL_ROOT, ".test-dsh-home")
+        tg = module.targets()
+        ok = (tg["codex"] == os.path.join(os.environ["CODEX_HOME"], "skills", "mr-agent")
+              and tg["deepseek"] == os.path.join(os.environ["DSH_HOME"], "skills", "mr-agent"))
+        RESULTS.append({"case": "H4 Codex / DeepSeek 安装根目录可配置", "group": "H",
+                        "ok": ok, "exit": 0, "detail": ""})
+        print("[%s] %-40s" % ("PASS" if ok else "FAIL", "H4 Codex / DeepSeek 安装根目录可配置"))
+    except Exception as exc:
+        RESULTS.append({"case": "H4 Codex / DeepSeek 安装根目录可配置", "group": "H",
+                        "ok": False, "exit": 0, "detail": str(exc)})
+        print("[FAIL] H4 Codex / DeepSeek 安装根目录可配置 %s" % exc)
+    finally:
+        for key, value in old.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def main():

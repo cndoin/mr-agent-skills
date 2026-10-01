@@ -5,6 +5,12 @@
 
 ## [未发布]
 
+### 新增
+
+- 安装器支持 OpenAI Codex 与 DeepSeek Harness，并可通过 `CODEX_HOME` / `DSH_HOME` 自定义技能根目录。
+- 精简中英双语技能描述，提升不同 Agent 技能目录的兼容性。
+- 更新英文、中文、日文、西班牙文、法文的安装指南。
+
 ### 修复
 
 - 拒绝 `run_mr.py` 中无效或重复的 step 编号，dry-run 不再创建运行目录，

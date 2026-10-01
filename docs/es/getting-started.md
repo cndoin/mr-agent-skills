@@ -17,7 +17,7 @@ El instalador solo copia los archivos de la skill; no instala Python, R ni las d
 python install.py --target all
 ```
 
-Elige `claude`, `workbuddy` o `codebuddy` con `--target`. `python install.py --list` valida los metadatos sin instalar.
+Elige `claude`, `workbuddy`, `codebuddy`, `codex` o `deepseek` con `--target`. Codex usa `~/.codex/skills/mr-agent` y DeepSeek Harness `~/.dsh/skills/mr-agent` de forma predeterminada; `CODEX_HOME` y `DSH_HOME` permiten cambiar las rutas. `python install.py --list` valida los metadatos y muestra los destinos sin instalar.
 
 ## Preparar el entorno
 

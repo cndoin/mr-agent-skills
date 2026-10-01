@@ -1,6 +1,6 @@
 ---
 name: mr-agent
-description: "Run LLM-driven Mendelian Randomization (MR) causal inference end to end with the MRAgent package. Use this skill whenever the task involves Mendelian randomization, MR causal inference or causal knowledge discovery, exposure-outcome pair discovery from PubMed, GWAS instrument selection via OpenGWAS / IEU OpenGWAS, TwoSampleMR, MR_MOE, MRlap sample-overlap correction, STROBE-MR quality assessment, or interpreting MR reports. Trigger on phrases such as '孟德尔随机化', 'MR 分析', 'MR 因果推断', '暴露结局', '因果发现', 'MRAgent', 'OpenGWAS', 'TwoSampleMR', 'gwas_token', 'STROBE-MR', or any request to find or validate causal risk factors for a disease. 用 MRAgent（xuwei1997/MRAgent, Apache-2.0）自动完成：PubMed 扫暴露-结局对 → 选 GWAS → 跑 TwoSampleMR → 出 PDF 报告。本技能负责编排、环境治理、分步执行与结果解读，不替代 MRAgent 本身的统计计算。"
+description: "Orchestrate Mendelian randomization (MR) research with MRAgent: discover exposure-outcome candidates in PubMed, select OpenGWAS instruments, run TwoSampleMR, and review reports. Use for MR causal inference, GWAS, MRAgent, OpenGWAS, TwoSampleMR, MRlap, MR-MOE, or STROBE-MR tasks. 适用于孟德尔随机化、MR 因果推断、GWAS、暴露结局发现与结果解读；编排 PubMed、OpenGWAS 和 TwoSampleMR 工作流，不替代专业统计判断。"
 license: MIT
 compatibility: "CI 已验证 Python 3.11/3.12；预检接受 3.9–3.12（上游排除 3.9.7），但 3.9/3.10 未纳入 CI，3.13+ 当前拦截。完整运行还需 R > 4.3.4、mragent 包与 OpenGWAS JWT。缺依赖时预检会报告阻塞项；未装 mragent 时离线检索 / 打包 / CSV 编辑 / 评测工具仍可运行。"
 allowed-tools: "Bash, Read, Write, Edit, Grep, Glob, WebFetch, WebSearch, TodoWrite"
@@ -13,13 +13,13 @@ metadata:
 
 # MRAgent · 孟德尔随机化因果发现
 
-## 路径约定（Claude Code / WorkBuddy 通用）
+## 路径约定（Codex / DeepSeek Harness / Claude Code / WorkBuddy 通用）
 
 本文件所在目录即**技能根目录**，下文所有相对路径（`scripts/…`、`tools/…`）都以它为基准。
 
 - **Claude Code**：可写成 `${CLAUDE_SKILL_DIR}/scripts/preflight.py`，
   该变量在技能加载时展开为技能目录的绝对路径。
-- **WorkBuddy / 其他 Agent**：先 `cd` 到技能目录，再照抄相对路径即可。
+- **Codex、DeepSeek Harness、WorkBuddy / 其他 Agent**：先 `cd` 到技能目录，再照抄相对路径即可。
 
 所有脚本内部都用 `__file__` 定位自身与同级资源，
 **从任意 cwd 调用都不会找错依赖**；`python scripts/preflight.py` 与
@@ -244,7 +244,7 @@ agent.run(step=[1,2,3,4,5,6,7,8,9,10])
 ## 安装到不同的 Agent
 
 ```bash
-# 全部（Claude Code + WorkBuddy + CodeBuddy）
+# 全部支持的 Agent（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）
 python install.py --target all
 
 # 只装 Claude Code
@@ -252,6 +252,10 @@ python install.py --target claude
 
 # 只装 WorkBuddy
 python install.py --target workbuddy
+
+# 只装 Codex 或 DeepSeek Harness
+python install.py --target codex
+python install.py --target deepseek
 ```
 
 `install.py` 会：复制技能目录 → 校验 frontmatter 合法性 → 下载离线 GWAS 清单到
@@ -261,7 +265,7 @@ python install.py --target workbuddy
 ## 自检
 
 ```bash
-python scripts/selftest.py          # 全量，80 条用例
+python scripts/selftest.py          # 全量，81 条用例
 python scripts/selftest.py --quick  # 跳过真实网络探测
 python scripts/selftest.py --json   # 输出 JSON，失败时退出码 1（可直接接 CI）
 ```

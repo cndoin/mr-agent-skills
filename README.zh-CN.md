@@ -21,17 +21,20 @@
 
 ## 安装
 
-支持 **Claude Code** 与 **WorkBuddy**（还有 CodeBuddy），一个命令装到位：
+支持 **Claude Code、WorkBuddy、CodeBuddy、OpenAI Codex 和 DeepSeek Harness**，一个命令安装到对应的原生技能目录：
 
 ```bash
 python install.py --target all       # 全部
 python install.py --target claude    # 只装 ~/.claude/skills/mr-agent
 python install.py --target workbuddy # 只装 ~/.workbuddy/skills/mr-agent
+python install.py --target codex     # 只装 Codex（默认 ~/.codex/skills/mr-agent）
+python install.py --target deepseek  # 只装 DeepSeek Harness（默认 ~/.dsh/skills/mr-agent）
 python install.py --list             # 只看装到哪，不装
 ```
 
-它会：复制技能目录 → 校验 `SKILL.md` frontmatter（不满足 Claude Code 的
-命名与 description 要求会直接报错）→ 下载离线 GWAS 清单到全局缓存 → 跑冒烟。
+Codex 支持用 `CODEX_HOME` 自定义根目录，DeepSeek Harness 支持用 `DSH_HOME` 自定义根目录；未设置时使用上述默认路径。
+
+它会：复制技能目录 → 校验 `SKILL.md` 的公共技能元数据 → 下载离线 GWAS 清单到全局缓存 → 跑冒烟。
 
 也可以手工拷贝，效果一样 —— 这个技能没有构建步骤，也没有必须安装的位置。
 
@@ -50,13 +53,23 @@ python install.py --list             # 只看装到哪，不装
   缺任何一项，`preflight.py` 会明确报阻塞，不会假装能跑。
 - **不编造结果数字** —— 所有结论必须来自 `output/` 下的 CSV 与 PDF。
 
+## 可选：让 MRAgent 内部调用 DeepSeek
+
+运行本技能的 Agent（Codex 或 DeepSeek Harness）和 MRAgent 分析期间调用的 LLM 是两项独立配置。MRAgent 支持 OpenAI 兼容接口：在系统环境变量中设置 `MRAGENT_AI_KEY`，然后把模型和接口地址传给运行器：
+
+```bash
+python scripts/run_mr.py --mode O --outcome "back pain" --steps 1,2 --llm-model deepseek-flash --base-url https://api.deepseek.com
+```
+
+请查看 [DeepSeek API 文档](https://api-docs.deepseek.com/guides/agent_integrations/opencode)确认当前模型名和接口兼容性。不要把真实 key 写进命令、源码或 issue。
+
 ## 目录结构
 
 ```
 mr-agent/
 ├── SKILL.md                      # 主入口：硬约束、操作规则、失败协议
 ├── README.md                     # 本文件
-├── install.py                    # 装到 Claude Code / WorkBuddy / CodeBuddy
+├── install.py                    # 装到 Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness
 ├── LICENSE / NOTICE              # MIT；NOTICE 记录上游与数据来源
 ├── CONTRIBUTING.md / SECURITY.md # 贡献约束；凭据处理规则
 ├── CHANGELOG.md / Makefile
@@ -71,7 +84,7 @@ mr-agent/
 │   ├── preflight.py              # 环境预检 → 结构化 JSON
 │   ├── run_mr.py                 # 统一运行入口（独立目录 + 日志捕获 + 静默失败捕获）
 │   ├── summarize_output.py       # 解析 output/ → 结构化摘要
-│   └── selftest.py               # 80 条自检用例
+│   └── selftest.py               # 81 条自检用例
 └── tools/                        # 原子能力（AI 可单独调用）
     ├── _common.py                # 共享层：JSON 契约、mragent 导入、fd 重定向
     ├── mr_pubmed.py              # PubMed 检索 / 论文详情
@@ -147,7 +160,7 @@ python tools/edit_csv.py --dir <run目录> --file mr_run.csv --row 0 --col MRorN
 ## 自检
 
 ```bash
-python scripts/selftest.py            # 80 条用例
+python scripts/selftest.py            # 81 条用例
 python scripts/selftest.py --quick    # 跳过真实网络探测
 python scripts/selftest.py --json     # 输出 JSON，供 CI 消费（失败时退出码 1）
 ```
@@ -187,9 +200,12 @@ E 组用例断言的正是"没有 mragent 时的降级路径"，装上反而会�
 | Claude Code | `~/.claude/skills/mr-agent` | 已验证：frontmatter 合法、自检全绿 |
 | WorkBuddy | `~/.workbuddy/skills/mr-agent` | 已验证：同上 |
 | CodeBuddy | `~/.codebuddy/skills/mr-agent` | 同格式，未实机验证 |
+| OpenAI Codex | `$CODEX_HOME/skills/mr-agent`（默认 `~/.codex/skills/mr-agent`） | 安装路径与元数据已自检；需在 Codex 中确认加载 |
+| DeepSeek Harness | `$DSH_HOME/skills/mr-agent`（默认 `~/.dsh/skills/mr-agent`） | 安装路径与元数据已自检；需在 Harness 中确认加载 |
 
-`SKILL.md` 的 frontmatter 只用了两边都认可的字段
-（`name` / `description` / `license` / `compatibility` / `allowed-tools` / `metadata`）。
+`SKILL.md` 使用各端共有的 `name` 和 `description` 作为发现元数据，并保留
+`license` / `compatibility` / `allowed-tools` / `metadata` 扩展信息。
+安装器检查公共字段，避免某个 Agent 的专属 frontmatter 规则阻止其他端加载。
 正文里的路径是相对技能根目录的，Claude Code 可写成
 `${CLAUDE_SKILL_DIR}/scripts/preflight.py`，其他 Agent `cd` 进去照抄即可。
 

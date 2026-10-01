@@ -17,7 +17,7 @@ The skill installer only copies the skill files; it does not install Python, R, 
 python install.py --target all
 ```
 
-Targets can be selected with `--target claude`, `--target workbuddy`, or `--target codebuddy`. Use `python install.py --list` to validate the skill metadata without installing.
+Select `--target claude`, `workbuddy`, `codebuddy`, `codex`, or `deepseek`. Codex installs to `$CODEX_HOME/skills/mr-agent` (default `~/.codex/skills/mr-agent`); DeepSeek Harness installs to `$DSH_HOME/skills/mr-agent` (default `~/.dsh/skills/mr-agent`). Use `python install.py --list` to validate metadata and print destinations without installing.
 
 ## Prepare your environment
 
