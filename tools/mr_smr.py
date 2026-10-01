@@ -187,6 +187,27 @@ def platform_key():
     return ("posix", arch, sys.platform)
 
 
+# 官方下载站在 WAF 后面，会直接拒绝 urllib 的默认 UA（Python-urllib/3.x）并返回
+# 403 Forbidden；换浏览器 UA 立刻变 200。这不是代理或网络问题 —— 实测同一个 URL
+# 在同一个 shell 里只改 UA：默认 UA 403，浏览器 UA 200 / 2171140 字节。
+# 所以下载请求必须显式带 UA，否则 fetch-binary 永远失败。
+DOWNLOAD_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+               "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+
+def download_request(url, extra=None):
+    """构造带浏览器 UA 的下载请求。
+
+    单独抽成函数是为了让自检能在不离线联网的前提下断言请求头 ——
+    这个缺陷当初就是"只有真联网才会暴露"才漏掉的。
+    """
+    import urllib.request
+    headers = {"User-Agent": DOWNLOAD_UA}
+    if extra:
+        headers.update(extra)
+    return urllib.request.Request(url, headers=headers)
+
+
 def download_binary(timeout=300):
     """下载并解压官方 smr 到全局缓存。返回 (path, error)。"""
     import urllib.request
@@ -203,11 +224,12 @@ def download_binary(timeout=300):
     zpath = os.path.join(BIN_DIR, name)
     sys.stderr.write("[%s] 下载 %s\n" % (TOOL, url))
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp, \
+        with urllib.request.urlopen(download_request(url),
+                                    timeout=timeout) as resp, \
                 io.open(zpath, "wb") as fh:
             shutil.copyfileobj(resp, fh)
     except Exception as exc:
-        return None, "下载失败: %s: %s（可手动下载后放到 PATH）" % (type(exc).__name__, exc)
+        return None, "下载失败: %s: %s（可手动下载后放到 PATH，或用 SMR_BIN 指定；HTTP 403 通常是 UA 被拒）" % (type(exc).__name__, exc)
     try:
         with zipfile.ZipFile(zpath) as z:
             z.extractall(BIN_DIR)

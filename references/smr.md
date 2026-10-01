@@ -71,12 +71,19 @@ Yang lab（西湖大学）的命令行工具，`smr` 二进制**自报 MIT Licen
 ```bash
 python tools/mr_smr.py fetch-binary      # 按平台自动下载到 ~/.cache/mr-agent/tools/smr
 # 或手动下载后： export SMR_BIN=/path/to/smr
+#
+# 注意：fetch-binary 不接受任何参数，固定解压到上面的全局缓存。
+# 要指定已有二进制只能用 SMR_BIN，没有 --out。
 python tools/mr_smr.py analyze --engine official \
     --bfile ref --gwas gwas.ma --beqtl eqtl --out result
 ```
 
 平台差异（官方现状，不是本技能的遗漏）：Windows 只发到 **1.3.1**，
 Linux / macOS 已到 **1.4.3**。
+
+下载请求会显式携带浏览器 UA：官方下载站的 WAF 对 urllib 的默认 UA
+直接回 `HTTP 403`（详见 §8 第 7 条）。这是本技能实测出来并修掉的缺陷 ——
+原先 `download_binary()` 用裸 `urlopen()`，导致 `fetch-binary` 必然失败。
 
 ### `--engine native` —— 纯标准库实现（零外部依赖）
 
@@ -228,3 +235,9 @@ python tools/mr_smr.py analyze --engine native --bfile /tmp/fix/ref \
    只会算出荒谬的数。
 6. **等位基因方向。** eQTL、GWAS、LD panel 三方的 A1 必须对齐；
    官方有频率一致性检查（`--disable-freq-ck` 可关，但不建议）。
+7. **下载官方二进制必须带浏览器 UA。** 官方下载站的 WAF 直接拒绝 urllib 的
+   默认 UA（`Python-urllib/3.x`）并返回 `HTTP 403 Forbidden`；同一个 URL、
+   同一个 shell，只把 UA 换成浏览器 UA 就立刻 `200`（实测 2171140 字节）。
+   `download_request()` 已内置 UA，自检 J14 离线断言请求头、J15 发 1 字节
+   Range 请求确认服务端真的放行。**这类 403 极易被误判成“网络不通”或“代理问题”，
+   于是去找网络而不是改请求头。** 自己写脚本拉这个包时注意同样的坑。
