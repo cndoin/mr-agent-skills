@@ -264,6 +264,38 @@ $ ls .idea/        → 有（且已被提交）
 | --- | --- |
 | `step_1_test_SimCSE.py` / `step_9_test_SimCSE.py` | 依赖 `SimCSE` 预训练模型（`princeton-nlp/unsup-simcse-*`，下载约 1.3 GB）+ 论文实验标注数据。属于**论文复现环境**而非生产能力。如确需，按上游脚本单独跑即可。 |
 | 生成真实 MR 结果数字 | 本机无 R / 无 Docker / WSL 被拦。预检会如实报阻塞，**不编造任何统计结果**。 |
+| **SMR（Summary-data-based MR）/ HEIDI** | **上游 MRAgent 本身就没有这个功能**，不是本技能的遗漏。见下方说明。 |
+
+### 关于 SMR：不在 MRAgent 的能力范围内
+
+**上游 MRAgent 没有 SMR 分析功能，本技能因此也没有** —— 这是能力面对齐，不是遗漏。
+
+SMR（Summary-data-based Mendelian Randomization，Zhu et al. 2016, *Nature Genetics*）
+是 Yang lab（西湖大学）的另一套方法，与 MRAgent 用的 TwoSampleMR **不是同一条技术路线**：
+
+| 维度 | MRAgent（TwoSampleMR） | SMR |
+| --- | --- | --- |
+| 数据输入 | OpenGWAS 上任意暴露 / 结局的 GWAS summary data | 同一套 LD panel 下的 **GWAS summary + 分子 QTL** summary |
+| 分子 QTL | 不需要 | 必须，格式为 `.besd` + `.esi`（Binary eQTL Summary Data） |
+| LD 参考面板 | 由 OpenGWAS API 侧做 `ld_clump` | **必须自备** `.ld` / `.bim` / `.fam`（1000G 或 UKB） |
+| 核心检验 | IVW / MR-Egger / weighted median / simple & weighted mode，外加多效性与异质性检验 | **SMR 检验**（`b_SMR`）+ **HEIDI 检验**（区分连锁不平衡 vs 水平多效性） |
+| 实现 | R 包 `TwoSampleMR` | 独立命令行 **`smr`**（C++），或 R 包 `smr` |
+| 主要用途 | 表型 → 表型 的因果推断 | **基因 / 分子表型 → 复杂疾病** 的因果基因定位 |
+
+逐处核对过的依据：
+
+- 上游 `mragent/agent_tool.py` 只有三个分析函数：
+  `MRtool`（标准 TwoSampleMR，第 261 行）、`MRtool_MOE`（第 386 行）、
+  `MRtool_MRlap`（第 487 行）—— **没有任何 SMR 相关代码**。
+- 提示词库 `template_text.py` 与 `step_9_test_prompt.py` **没有 SMR 模板**，
+  只有 `LLM_MR_template` / `LLM_MR_MOE_template` / `mrlap_result_text` 等。
+- 上游 `README.md` / `pyproject.toml` 也未声明 SMR 依赖。
+- 全仓库搜 `SMR`，仅命中 `opengwas.csv` 里的 `eQTLGen` 等**数据集名称**，
+  以及 `STROBE_MR`（MR 报告规范，与 SMR 无关）。
+
+**若确需 SMR**，那是**新增能力**而非"补齐遗漏"，需要：装 `smr` 命令行工具 +
+下载 1000G LD reference + 取得 `.besd` 格式的 QTL 数据（如 eQTLGen / GTEx 转换版）。
+可作为独立工具（例如 `tools/mr_smr.py`）另行扩展，与本技能"复刻上游"的定位分开。
 
 ---
 

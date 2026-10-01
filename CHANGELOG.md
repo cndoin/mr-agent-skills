@@ -23,6 +23,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 - Add English as the primary README and provide localized overviews and getting-started guides in Simplified Chinese, Japanese, Spanish, and French.
 - Provide an English security policy and contributing guide.
+- Record that SMR / HEIDI is out of scope because upstream MRAgent has no such feature, keeping the capability surface aligned.
 
 ## 1.0.0 — 2026-10-01
 

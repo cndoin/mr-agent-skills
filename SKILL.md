@@ -72,6 +72,14 @@ metadata:
     并使用包内硬编码的作者 key；当前 API 不支持注入用户自己的 key。
     独立工具 `tools/mr_synonyms.py` 只接受用户自己的 UMLS key。
 
+11. **本技能不含 SMR / HEIDI，这是故意的。**
+    SMR（Summary-data-based MR）是 TwoSampleMR 之外的另一套方法学，
+    需要 `.besd` 格式的 QTL 数据 + 自备 LD reference panel + `smr` 命令行工具。
+    上游 MRAgent **本身就没有** SMR 功能（`agent_tool.py` 只有 `MRtool` /
+    `MRtool_MOE` / `MRtool_MRlap` 三个分析函数），本技能的能力面与之严格对齐。
+    被问到 SMR 时如实回答"上游与本技能都不提供"，
+    **不要拿 TwoSampleMR 冒充 SMR**。详见 `references/upstream-diff.md` 第九章。
+
 ## 运行规则
 
 ### 第一步永远是 preflight，不要凭感觉开工
