@@ -5,7 +5,7 @@ license: MIT
 compatibility: "CI 已验证 Python 3.11/3.12；预检接受 3.9–3.12（上游排除 3.9.7），但 3.9/3.10 未纳入 CI，3.13+ 当前拦截。完整运行还需 R > 4.3.4、mragent 包与 OpenGWAS JWT。缺依赖时预检会报告阻塞项；未装 mragent 时离线检索 / 打包 / CSV 编辑 / 评测工具仍可运行。"
 allowed-tools: "Bash, Read, Write, Edit, Grep, Glob, WebFetch, WebSearch, TodoWrite"
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   author: 寇豆码
   category: bioinformatics
   tags: [mendelian-randomization, causal-inference, gwas, opengwas, twosamplemr, mragent, strobe-mr, epidemiology, bioinformatics]
@@ -58,9 +58,19 @@ metadata:
    若目录名与 Python 包同名，在该目录的父级下跑 python
    会技能目录当成命名空间包导入，报
    `cannot import name 'MRAgent' from 'mragent' (unknown location)`。
-9. **同义词扩展默认关闭。** 上游 MRAgent 在 `synonyms=True` 时会调用 UMLS，
-   并使用包内硬编码的作者 key；当前 API 不支持注入用户自己的 key。
-   独立工具 `tools/mr_synonyms.py` 只接受用户自己的 UMLS key。
+9. **不要用上游的在线 GWAS 检索 —— 它已经失效了。**
+   上游 `check_keyword_in_opengwas` / `get_gwas_id` 是爬 `gwas.mrcieu.ac.uk` 的 HTML，
+   靠页面里有没有 `"Filtered to 0 records"` 判断命中。2026-10-01 实测该页面已改为
+   前端渲染，**对任何关键词都不再包含这个字符串**（连乱码词都不含），
+   表格里只剩 `Failed to load batches data.`。
+   后果是它对**任何**输入都返回 True（永远"有数据"），不报错、静默往下走，
+   把垃圾 `gwas_id` 一路写进 `Outcome_SNP.csv`。
+   本技能不复刻该行为：`mr_gwas.py --mode online` 改走官方鉴权 API
+   （`api.opengwas.io/api/gwasinfo`，需 JWT）；没有 JWT 就用 `--mode csv` 读离线清单。
+
+10. **同义词扩展默认关闭。** 上游 MRAgent 在 `synonyms=True` 时会调用 UMLS，
+    并使用包内硬编码的作者 key；当前 API 不支持注入用户自己的 key。
+    独立工具 `tools/mr_synonyms.py` 只接受用户自己的 UMLS key。
 
 ## 运行规则
 
@@ -210,18 +220,20 @@ agent.run(step=[1,2,3,4,5,6,7,8,9,10])
 | 工具 | 对应上游 | 典型用法 |
 | --- | --- | --- |
 | `mr_pubmed.py` | `pubmed_crawler` / `get_paper_details` | `--keyword "back pain" --num 20` |
-| `mr_gwas.py` | `check_keyword_in_opengwas` / `get_gwas_id` | `--keyword "body mass index" --mode csv`（离线，不需 mragent） |
+| `mr_gwas.py` | `check_keyword_in_opengwas` / `get_gwas_id` | `--keyword "body mass index"`（默认离线，不需 mragent） |
 | `mr_synonyms.py` | `get_synonyms`（UMLS） | `--term "body mass index"`（需自己的 `UMLS_API_KEY`） |
 | `mr_llm.py` | `llm_chat` / `openai_gpt` / `ollama_chat` | `--prompt "..." --model gpt-4o` |
 | `mr_eval.py` | `outcome_exposure_MRorNot` / `STROBE_MR` | `--mrornot --outcome X --exposure Y` |
 | `mr_bench.py` | `step_2_test` / `step_5_test` | `--file a.csv --gt MRorNot --pred MRorNot_gpt-4o --mode accuracy` |
+| `mr_prompt.py` | `template_text.py` + `step_9_test_prompt.py` | `--list` / `--show LLM_MR_template` / `--render ...` |
 | `export_results.py` | web 的 ZIP 下载按钮 | `export_results.py <output目录>` |
 | `edit_csv.py` | web 的在线表格编辑 | `--dir <run> --file mr_run.csv --show` |
 | `serve_web.py` | `web_demo.py` | `serve_web.py --check` |
 
-`mr_gwas.py` 的离线模式和 `export_results.py` / `edit_csv.py` / `mr_bench.py`
-不依赖 mragent，**没装环境也能跑**；
-其余工具需要 mragent（即 Python 3.11/3.12 venv）。
+**只有 `mr_eval.py` 真正需要 mragent**（它要构造 `MRAgent` 实例才能拿到那两个方法）；
+`serve_web.py` 需要 streamlit。其余工具都是原生实现，
+`mr_pubmed` / `mr_synonyms` / `mr_llm` / `mr_gwas` 的离线模式 / `mr_prompt` /
+`export_results` / `edit_csv` / `mr_bench` **在没装 mragent 的机器上也能跑**。
 
 ## 参考文件
 
@@ -232,6 +244,12 @@ agent.run(step=[1,2,3,4,5,6,7,8,9,10])
 - `scripts/preflight.py` —— 环境预检，输出 JSON
 - `scripts/run_mr.py` —— 统一运行入口（独立工作目录 + 日志捕获 + 静默失败捕获）
 - `scripts/summarize_output.py` —— 解析 output 目录出摘要
+- `key.py.example` —— 上游 3 个实验脚本 `from key import ...` 用的凭据模板
+  （上游仓库里没有 `key.py`，那些脚本 clone 下来必 `ModuleNotFoundError`；
+  本技能一律走环境变量，不需要这个文件，它只是给要跑上游原版脚本的人兜底）
+
+想知道"上游某个函数对应本技能哪个入口"，直接查
+`references/upstream-diff.md` 第五节的逐项对照表。
 
 ## 运行日志在哪
 
@@ -265,7 +283,7 @@ python install.py --target deepseek
 ## 自检
 
 ```bash
-python scripts/selftest.py          # 全量，81 条用例
+python scripts/selftest.py          # 全量，96 条用例
 python scripts/selftest.py --quick  # 跳过真实网络探测
 python scripts/selftest.py --json   # 输出 JSON，失败时退出码 1（可直接接 CI）
 ```

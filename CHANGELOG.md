@@ -27,3 +27,35 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 ## 1.0.0 — 2026-10-01
 
 Initial release of the skill wrapper and helper toolkit. See the [Simplified Chinese changelog](CHANGELOG.zh-CN.md) for the detailed implementation history and source-level findings.
+
+## [1.2.0] - 2026-10-01
+
+### Added
+- `tools/mr_prompt.py`：上游提示词库，含 `template_text.py` 的 10 个主模板与
+  `step_9_test_prompt.py` 的 12 个 step9 消融变体（6 变体 x 2 模型）。
+  支持 `--list` / `--show` / `--render` / `--diff-mragent`；提示词已 vendor 到
+  `tools/prompts.json`，自检 I2 用 AST 断言与上游源码逐字一致（10/10）。
+- `key.py.example`：上游 3 个实验脚本 `from key import ...` 依赖的凭据模板。
+  上游仓库没有 `key.py`，也没有 `.gitignore` 去排除它，所以那些脚本 clone
+  下来必然 `ModuleNotFoundError: No module named 'key'`。
+- 自检新增分组 I（上游能力对齐）与用例 I10（文本文件行尾必须 LF），
+  用例数 81 -> 96。
+
+### Changed
+- `tools/mr_pubmed.py` 改为**原生 NCBI E-utilities 实现**，不再依赖 mragent。
+  新增 `--first-abstract-only` / `--strict-shape` 还原上游输出形状，
+  新增 `--email` / `NCBI_EMAIL`，不再冒用上游硬编码的作者邮箱。
+- `tools/mr_gwas.py` 的 online 模式不再复刻上游已失效的 HTML 爬虫，改走
+  OpenGWAS 官方鉴权 API（`api.opengwas.io/api/gwasinfo`），新增 `--refresh`。
+- `tools/mr_synonyms.py`、`tools/mr_llm.py` 改为原生实现，不再依赖 mragent。
+- `scripts/summarize_output.py` 改用 argparse，新增 `--limit` / `--strict`。
+- `.gitignore` 增加 `key.py`（保留 `key.py.example`）。
+- 全仓库 14 个文本文件由 CRLF 归一为 LF。
+
+### Fixed
+- `summarize_output.py --help` 原来被当成目录路径，返回"目录不存在"的 JSON
+  且 exit 1；现与其他入口一致：输 usage、exit 0。
+- `mr_pubmed.py` 把上游传给 Entrez 的 `'most recent'` 映射为合法的 `pub_date`
+  —— 上游那个取值 Entrez 根本不认，会被静默忽略。
+- 比对文档里引用的上游泄露凭据做打码处理（自检 H1 发现）。
+
