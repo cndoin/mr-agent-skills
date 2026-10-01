@@ -37,3 +37,9 @@ Thumbs.db
 *.key
 *.pem
 token.txt
+
+# 上游实验脚本用 `from key import AI_key, mr_key` 取凭据，
+# 但上游仓库里根本没有这个文件（所以那些脚本 clone 下来必 ImportError）。
+# 模板 key.py.example 会被提交，真实凭据文件 key.py 必须排除。
+key.py
+!key.py.example
