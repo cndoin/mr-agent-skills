@@ -137,19 +137,29 @@ def backup_existing(dst):
         return None
     os.makedirs(BACKUP_ROOT, exist_ok=True)
     base = os.path.basename(dst)
-    bak = os.path.join(BACKUP_ROOT, "%s.bak-%s"
-                       % (base, time.strftime("%Y%m%d-%H%M%S")))
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    bak = os.path.join(BACKUP_ROOT, "%s.bak-%s" % (base, stamp))
+    # 批量安装多个目标时，备份目录名会落在同一秒从而撞车：
+    # shutil.move 到已存在的目录在 Windows 上会静默把源移进去，
+    # 降级分支的 copytree 则直接报 FileExistsError。
+    # 撞车就追加 -1 / -2 …，绝不覆盖已有备份。
+    n = 1
+    while os.path.exists(bak):
+        bak = os.path.join(BACKUP_ROOT, "%s.bak-%s-%d" % (base, stamp, n))
+        n += 1
     try:
         shutil.move(dst, bak)
     except Exception:
         # 跨盘/跨设备时 move 会失败，降级成复制后删除
         shutil.copytree(dst, bak, ignore=_ignore)
         shutil.rmtree(dst, ignore_errors=True)
-    # 只留最近 3 份
-    olds = sorted([p for p in os.listdir(BACKUP_ROOT)
-                   if p.startswith(base + ".bak-")], reverse=True)
-    for p in olds[3:]:
-        shutil.rmtree(os.path.join(BACKUP_ROOT, p), ignore_errors=True)
+    # 只留最近 3 份：按修改时间排序，避免同一秒的后缀名排序歧义
+    olds = [q for q in os.listdir(BACKUP_ROOT)
+            if q.startswith(base + ".bak-")]
+    olds.sort(key=lambda q: os.path.getmtime(os.path.join(BACKUP_ROOT, q)),
+              reverse=True)
+    for q in olds[3:]:
+        shutil.rmtree(os.path.join(BACKUP_ROOT, q), ignore_errors=True)
     return bak
 
 

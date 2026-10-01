@@ -291,7 +291,7 @@ python install.py --target deepseek
 ## 自检
 
 ```bash
-python scripts/selftest.py          # 全量，96 条用例
+python scripts/selftest.py          # 全量，97 条用例
 python scripts/selftest.py --quick  # 跳过真实网络探测
 python scripts/selftest.py --json   # 输出 JSON，失败时退出码 1（可直接接 CI）
 ```

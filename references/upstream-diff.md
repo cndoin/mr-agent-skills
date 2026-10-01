@@ -2,7 +2,7 @@
 
 比对时间 **2026-10-01**（第二轮复核）。
 对象：`github.com/xuwei1997/MRAgent` main 分支 + PyPI `mragent==0.2.5`。
-本技能版本：**1.2.0**，自检 **96 条用例全绿**。
+本技能版本：**1.2.0**，自检 **97 条用例全绿**。
 
 ---
 
@@ -303,7 +303,7 @@ SMR（Summary-data-based Mendelian Randomization，Zhu et al. 2016, *Nature Gene
 
 | 验证 | 结果 |
 | --- | --- |
-| 自检用例 | **96 条，全绿** —— 工作区与 5 个安装位（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）各跑一遍 |
+| 自检用例 | **97 条，全绿** —— 工作区与 5 个安装位（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）各跑一遍 |
 | 主模板与上游逐字一致 | **10/10 一致**（自检 I2，AST 解析比对） |
 | `mr_llm` 线上请求形状 | 本地起 OpenAI 兼容 mock 服务真发请求：路径 / Bearer / `seed=42` / system prompt 全部与上游一致（自检 I9） |
 | `mr_synonyms` 真实 UMLS | 假 key → 真实返回 **HTTP 401**，被转成结构化错误 |

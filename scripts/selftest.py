@@ -553,6 +553,45 @@ def group_h():
             else:
                 os.environ[key] = value
 
+    # 批量安装多个目标时，备份目录名会落在同一秒。
+    # 修复前 shutil.move 到已存在目录会静默把源移进去，
+    # 降级分支的 copytree 则直接 FileExistsError —— 实测装到第 2 个就崩。
+    try:
+        import importlib.util as _iu
+        _spec = _iu.spec_from_file_location(
+            "mragent_install_bak", os.path.join(SKILL_ROOT, "install.py"))
+        _mod = _iu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        _tmp = tempfile.mkdtemp(prefix="mr-agent-bak-")
+        _old_root = _mod.BACKUP_ROOT
+        try:
+            _mod.BACKUP_ROOT = os.path.join(_tmp, "backups")
+            made = []
+            for i in range(3):
+                _dst = os.path.join(_tmp, "src%d" % i, "mr-agent")
+                os.makedirs(_dst, exist_ok=True)
+                with io.open(os.path.join(_dst, "SKILL.md"), "w",
+                             encoding="utf-8") as fh:
+                    fh.write("stub")
+                made.append(_mod.backup_existing(_dst))
+            ok = (len(set(made)) == 3
+                  and all(os.path.isfile(os.path.join(b, "SKILL.md"))
+                          for b in made)
+                  and not any(os.path.exists(os.path.join(b, "mr-agent"))
+                              for b in made))
+            detail = "" if ok else "备份路径重复或错位: %r" % (made,)
+        finally:
+            _mod.BACKUP_ROOT = _old_root
+            shutil.rmtree(_tmp, ignore_errors=True)
+        RESULTS.append({"case": "H5 备份目录同秒不撞车", "group": "H",
+                        "ok": ok, "exit": 0, "detail": detail})
+        print("[%s] %-40s %s" % ("PASS" if ok else "FAIL",
+                                 "H5 备份目录同秒不撞车", detail))
+    except Exception as exc:
+        RESULTS.append({"case": "H5 备份目录同秒不撞车", "group": "H",
+                        "ok": False, "exit": 0, "detail": str(exc)})
+        print("[FAIL] H5 备份目录同秒不撞车 %s" % exc)
+
 
 # ------------------------------------------------------------------ I
 def group_i():

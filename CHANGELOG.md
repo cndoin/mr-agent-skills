@@ -18,6 +18,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 - Disable UMLS synonym expansion by default in the full workflow and warn when it is explicitly enabled.
 - Expand credential scanning and regression coverage.
 - Enforce the upstream Python version exclusion for 3.9.7 in preflight.
+- Keep installer backup directory names unique when several targets are installed within the same second, which previously aborted the run with `FileExistsError`; add self-check case H5 (96 -> 97).
 
 ### Documentation
 
