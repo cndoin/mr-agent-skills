@@ -414,10 +414,14 @@ def group_e():
     # 换成离线确定性的用例：指向一个必然拒绝连接的端口。
     # 原来这条是"无 mragent 应 exit 2"，但 mr_llm 已改为原生实现，
     # 带 key 时会真去打 api.openai.com（401，非确定性），不适合做单测。
+    # 断言「存在可读的连接失败原因」即可：直连时在 error，经代理时
+    # （宿主设了 http_proxy）在 hint。写死其中一个位置会随网络环境假失败。
     case("E5 mr_llm 服务不可达",
          ["mr_llm.py", "--prompt", "hi", "--model-type", "ollama",
           "--model", "llama3", "--base-url", "http://127.0.0.1:1"], 1,
-         cwd=TOOLS, check=lambda x: "无法连接" in (x.get("error") or ""), group="E")
+         cwd=TOOLS,
+         check=lambda x: "无法连接" in ((x.get("error") or "")
+                                        + (x.get("hint") or "")), group="E")
     case("E6 mr_eval 缺参数", ["mr_eval.py"], 2, cwd=TOOLS, group="E")
     case("E7 mr_eval --mrornot 缺 exposure",
          ["mr_eval.py", "--mrornot", "--outcome", "x"], 2, cwd=TOOLS, group="E")

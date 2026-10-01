@@ -116,6 +116,15 @@ def main():
         fail(TOOL, "无法连接 LLM 服务: %s" % exc.reason,
              "ollama 请确认本地已启动（默认 http://localhost:11434）；"
              "OpenAI 兼容平台请检查 --base-url 与网络")
+    except OSError as exc:
+        # 传输层直接断掉：连接重置 / 对端强制关闭 / 超时 / DNS 失败。
+        # 这些同样是「连不上」，但 OSError 不是 URLError，会漏到下面的兜底分支，
+        # 只剩一句原始异常名（既无可执行建议，调用方也无法按连接失败统一处理）。
+        # 注意分支顺序：HTTPError ⊂ URLError ⊂ OSError，必须由具体到宽泛。
+        fail(TOOL, "无法连接 LLM 服务: %s: %s" % (type(exc).__name__, exc),
+             "连接在传输层被中断（连接重置 / 对端关闭 / 超时 / DNS 失败）。"
+             "检查 --base-url、网络与代理设置；ollama 请确认本地已启动"
+             "（默认 http://localhost:11434）")
     except ValueError as exc:
         fail(TOOL, str(exc), "平台返回的结构不是标准 OpenAI 格式")
     except Exception as exc:
