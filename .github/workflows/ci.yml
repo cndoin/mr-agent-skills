@@ -15,6 +15,8 @@ jobs:
   selftest:
     name: 自检 · ${{ matrix.os }} · py${{ matrix.python }}
     runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
     strategy:
       # 一个平台挂了，别的平台结果仍有价值
       fail-fast: false
@@ -22,9 +24,9 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
 
