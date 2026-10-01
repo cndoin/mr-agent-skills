@@ -36,6 +36,7 @@ CRED_VARS = ["MRAGENT_GWAS_TOKEN", "OPENGWAS_JWT", "MRAGENT_AI_KEY",
              "OPENAI_API_KEY"]
 
 RESULTS = []
+QUICK = False
 
 
 def clean_env(extra=None):
@@ -277,6 +278,13 @@ def group_c(base):
     case("C10 参数是文件不是目录",
          [SUM, os.path.join(base, "full", "output", "run1", "mr_run.csv")], 1,
          group="C")
+    # --help 必须走 argparse 的 usage（exit 0），而不是被当成目录路径。
+    # 修复前的行为：--help 被当作目录 → 返回 "目录不存在" 的 JSON，exit 1。
+    rc, out, err = run([SUM, "--help"], cwd=SCRIPTS)
+    ok = rc == 0 and "usage" in (out + err).lower()
+    RESULTS.append({"case": "C11 summarize --help", "group": "C", "ok": ok,
+                    "exit": rc, "detail": "" if ok else "stdout前80=%r" % out[:80]})
+    print("[%s] %-40s exit=%r" % ("PASS" if ok else "FAIL", "C11 summarize --help", rc))
 
 
 # ------------------------------------------------------------------ D
@@ -389,22 +397,45 @@ def group_e():
     print("=" * 78)
     print("E. 工具包：依赖 mragent 的，验证降级路径（本机无 3.12 环境）")
     print("=" * 78)
-    case("E1 mr_pubmed 无 mragent", ["mr_pubmed.py", "--keyword", "back pain"], 2,
-         cwd=TOOLS, check=lambda x: "mragent" in (x.get("error") or "")
-         and x.get("hint"), group="E")
-    case("E2 mr_pubmed 缺参数", ["mr_pubmed.py"], 2, cwd=TOOLS, group="E")
-    case("E3 mr_synonyms 无 mragent", ["mr_synonyms.py", "--term", "BMI"], 2,
-         cwd=TOOLS, group="E")
+    # mr_pubmed 已改为原生 NCBI E-utilities 实现（不再 import mragent），
+    # 所以原来的「无 mragent 应 exit 2」不再成立 —— 换成两条离线的确定性断言。
+    _src = io.open(os.path.join(TOOLS, "mr_pubmed.py"), encoding="utf-8").read()
+    _ok = "require_mragent" not in _src and "eutils.ncbi.nlm.nih.gov" in _src
+    RESULTS.append({"case": "E1 mr_pubmed 已脱离 mragent", "group": "E", "ok": _ok,
+                    "exit": 0, "detail": "" if _ok else "仍引用 require_mragent 或未用 E-utilities"})
+    print("[%s] %-40s %s" % ("PASS" if _ok else "FAIL", "E1 mr_pubmed 已脱离 mragent", ""))
+    case("E2 mr_pubmed --num 0 参数校验",
+         ["mr_pubmed.py", "--keyword", "x", "--num", "0"], 2, cwd=TOOLS,
+         check=lambda x: "正整数" in (x.get("error") or ""), group="E")
+    case("E3 mr_synonyms 缺 key", ["mr_synonyms.py", "--term", "BMI"], 2,
+         cwd=TOOLS, check=lambda x: "UMLS" in (x.get("error") or ""), group="E")
     case("E4 mr_llm 缺 key", ["mr_llm.py", "--prompt", "hi"], 2, cwd=TOOLS,
          check=lambda x: "key" in (x.get("error") or ""), group="E")
-    case("E5 mr_llm 无 mragent(带key)", ["mr_llm.py", "--prompt", "hi"], 2,
-         cwd=TOOLS, env={"MRAGENT_AI_KEY": "fake"}, group="E")
+    # 换成离线确定性的用例：指向一个必然拒绝连接的端口。
+    # 原来这条是"无 mragent 应 exit 2"，但 mr_llm 已改为原生实现，
+    # 带 key 时会真去打 api.openai.com（401，非确定性），不适合做单测。
+    case("E5 mr_llm 服务不可达",
+         ["mr_llm.py", "--prompt", "hi", "--model-type", "ollama",
+          "--model", "llama3", "--base-url", "http://127.0.0.1:1"], 1,
+         cwd=TOOLS, check=lambda x: "无法连接" in (x.get("error") or ""), group="E")
     case("E6 mr_eval 缺参数", ["mr_eval.py"], 2, cwd=TOOLS, group="E")
     case("E7 mr_eval --mrornot 缺 exposure",
          ["mr_eval.py", "--mrornot", "--outcome", "x"], 2, cwd=TOOLS, group="E")
-    case("E8 mr_gwas online 无 mragent",
+    # online 模式不再复刻上游那套已失效的 HTML 爬虫，改为要求 OpenGWAS JWT。
+    # 断言：无 JWT 时 exit 2，且提示里要说明上游行为已失效、本工具不复刻。
+    case("E8 mr_gwas online 无 JWT",
          ["mr_gwas.py", "--keyword", "BMI", "--mode", "online"], 2, cwd=TOOLS,
-         group="E")
+         check=lambda x: "JWT" in (x.get("error") or "")
+         and "失效" in (x.get("hint") or ""), group="E")
+    # 假 JWT 应当被 OpenGWAS 拒绝（HTTP 401）并在本工具里变成结构化错误，
+    # 而不是抛出堆栈。这条会真的打一次网络（--quick 时跳过）。
+    if not QUICK:
+        case("E9 mr_gwas online 假 JWT 被拒",
+             ["mr_gwas.py", "--keyword", "BMI", "--mode", "online"], 1, cwd=TOOLS,
+             env={"OPENGWAS_JWT": "bogus.jwt.value"},
+             check=lambda x: "401" in (x.get("error") or ""), group="E")
+    else:
+        skip("E9 mr_gwas online 假 JWT 被拒", "--quick 跳过真实网络", group="E")
 
 
 # ------------------------------------------------------------------ F/G
@@ -433,7 +464,10 @@ def group_fg():
     for name, script, cwd in [("G1 mr_gwas --help", "mr_gwas.py", TOOLS),
                               ("G2 run_mr --help", "run_mr.py", SCRIPTS),
                               ("G3 edit_csv --help", "edit_csv.py", TOOLS),
-                              ("G4 mr_bench --help", "mr_bench.py", TOOLS)]:
+                              ("G4 mr_bench --help", "mr_bench.py", TOOLS),
+                              ("G5 summarize --help", "summarize_output.py", SCRIPTS),
+                              ("G6 mr_prompt --help", "mr_prompt.py", TOOLS),
+                              ("G7 mr_pubmed --help", "mr_pubmed.py", TOOLS)]:
         rc, out, _ = run([script, "--help"], cwd=cwd)
         ok = rc == 0 and "usage" in out.lower()
         RESULTS.append({"case": name, "group": "G", "ok": ok, "exit": rc,
@@ -520,11 +554,180 @@ def group_h():
                 os.environ[key] = value
 
 
+# ------------------------------------------------------------------ I
+def group_i():
+    print()
+    print("=" * 78)
+    print("I. 上游能力对齐：提示词库 / 不复刻已失效的爬虫")
+    print("=" * 78)
+    import ast
+    import re
+
+    def mrprompt(*args):
+        rc, out, _ = run(["mr_prompt.py"] + list(args), cwd=TOOLS)
+        try:
+            return rc, json.loads(out)
+        except Exception:
+            return rc, {}
+
+    # I1 数量与分组
+    rc, d = mrprompt("--list")
+    n_main = len((d.get("groups") or {}).get("main") or [])
+    n_abl = len((d.get("groups") or {}).get("step9_ablation") or [])
+    ok = rc == 0 and d.get("total") == 22 and n_main == 10 and n_abl == 12
+    RESULTS.append({"case": "I1 提示词库 22 个（10 主 + 12 消融）", "group": "I",
+                    "ok": ok, "exit": rc,
+                    "detail": "main=%s ablation=%s total=%s" % (n_main, n_abl, d.get("total"))})
+    print("[%s] %-40s main=%s ablation=%s" % ("PASS" if ok else "FAIL",
+          "I1 提示词库 22 个（10 主 + 12 消融）", n_main, n_abl))
+
+    # I2 主模板原文与上游源码逐字一致（需要上游仓库；没有就跳过）
+    up = os.path.join(os.path.dirname(SKILL_ROOT), "MRAgent-upstream",
+                      "mragent", "template_text.py")
+    if os.path.exists(up):
+        tree = ast.parse(io.open(up, encoding="utf-8", errors="replace").read())
+        upstream = {}
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name) \
+                    and isinstance(node.value, ast.Constant) \
+                    and isinstance(node.value.value, str):
+                upstream[node.targets[0].id] = node.value.value
+        lib = json.load(io.open(os.path.join(TOOLS, "prompts.json"), encoding="utf-8"))
+        diff = [k for k, v in lib["main"].items() if upstream.get(k) != v["text"]]
+        ok = not diff and len(lib["main"]) == 10
+        RESULTS.append({"case": "I2 主模板与上游逐字一致", "group": "I", "ok": ok,
+                        "exit": 0, "detail": ("不一致: %s" % diff) if diff else ""})
+        print("[%s] %-40s %s" % ("PASS" if ok else "FAIL",
+                                 "I2 主模板与上游逐字一致", diff or "10/10 一致"))
+    else:
+        skip("I2 主模板与上游逐字一致", "本机没有 MRAgent-upstream 仓库", group="I")
+
+    # I3 渲染
+    rc, d = mrprompt("--render", "synonyms_text", "--var", "OE=back pain")
+    ok = rc == 0 and d.get("ok") and "back pain" in (d.get("rendered") or "") \
+        and d.get("unused_vars") == []
+    RESULTS.append({"case": "I3 模板渲染", "group": "I", "ok": bool(ok), "exit": rc,
+                    "detail": "" if ok else "rendered=%r" % (d.get("rendered") or "")[:80]})
+    print("[%s] %-40s" % ("PASS" if ok else "FAIL", "I3 模板渲染"))
+
+    # I4 缺占位符必须 exit 2 且指明缺哪个
+    case("I4 渲染缺占位符", ["mr_prompt.py", "--render", "pubmed_text_obo",
+                             "--var", "Outcome=x"], 2, cwd=TOOLS,
+         check=lambda x: "缺少占位符" in (x.get("error") or "")
+         and "abstract" in (x.get("error") or ""), group="I")
+
+    # I5 名字写错要有近似提示
+    case("I5 模板名写错的近似提示",
+         ["mr_prompt.py", "--show", "LLM_MR_templat"], 2, cwd=TOOLS,
+         check=lambda x: "近似名" in (x.get("hint") or ""), group="I")
+
+    # I6 step9 消融变体的 6 个变体 × 2 个模型都要在
+    lib = json.load(io.open(os.path.join(TOOLS, "prompts.json"), encoding="utf-8"))
+    variants = {v["variant"] for v in lib["step9_ablation"].values()}
+    models = {v["model"] for v in lib["step9_ablation"].values()}
+    ok = len(variants) == 6 and models == {"MR", "MR_MOE"}
+    RESULTS.append({"case": "I6 消融变体 6 组 × 2 模型", "group": "I", "ok": ok,
+                    "exit": 0, "detail": "variants=%s models=%s" % (sorted(variants), sorted(models))})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", "I6 消融变体 6 组 × 2 模型",
+                             sorted(variants)))
+
+    # I7 mr_gwas 不得再调用上游那套已失效的 HTML 爬虫
+    src = io.open(os.path.join(TOOLS, "mr_gwas.py"), encoding="utf-8").read()
+    code = re.sub(r'(?s)""".*?"""', "", src)  # 去掉 docstring，只看代码
+    ok = "check_keyword_in_opengwas(" not in code and "gwas.mrcieu.ac.uk/datasets" not in code
+    RESULTS.append({"case": "I7 不复刻失效爬虫", "group": "I", "ok": ok, "exit": 0,
+                    "detail": "" if ok else "代码里仍调用上游爬虫"})
+    print("[%s] %-40s" % ("PASS" if ok else "FAIL", "I7 不复刻失效爬虫"))
+
+    # I8 这三个工具的原子能力本来就是公开 REST，不该被迫依赖整个 mragent
+    freed = {}
+    for fn in ("mr_pubmed.py", "mr_synonyms.py", "mr_llm.py"):
+        body = io.open(os.path.join(TOOLS, fn), encoding="utf-8").read()
+        freed[fn] = "require_mragent(" not in body
+    ok = all(freed.values())
+    RESULTS.append({"case": "I8 三工具已脱离 mragent", "group": "I", "ok": ok,
+                    "exit": 0, "detail": str(freed)})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", "I8 三工具已脱离 mragent",
+                             "" if ok else freed))
+
+    # I9 mr_llm 的线上请求形状（本地起一个 OpenAI 兼容 mock 服务真发一次）
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    seen = {}
+
+    class _H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            seen["path"] = self.path
+            seen["auth"] = self.headers.get("Authorization") or ""
+            try:
+                seen["body"] = json.loads(self.rfile.read(n).decode("utf-8"))
+            except Exception:
+                seen["body"] = {}
+            out = json.dumps({"choices": [{"message": {"content": "MOCK"}}]}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(out)))
+            self.end_headers()
+            self.wfile.write(out)
+
+    srv = HTTPServer(("127.0.0.1", 0), _H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        rc, out, _ = run(["mr_llm.py", "--prompt", "PING", "--model", "gpt-4o",
+                          "--base-url", "http://127.0.0.1:%d/v1" % srv.server_address[1],
+                          "--api-key", "sk-selftest"], cwd=TOOLS)
+        body = seen.get("body") or {}
+        msgs = body.get("messages") or []
+        ok = (rc == 0 and seen.get("path") == "/v1/chat/completions"
+              and seen.get("auth", "").startswith("Bearer sk-selftest")
+              and body.get("model") == "gpt-4o" and body.get("seed") == 42
+              and len(msgs) == 2
+              and msgs[0].get("content") == "You are a helpful biomedical scientist."
+              and msgs[1].get("content") == "PING")
+        RESULTS.append({"case": "I9 mr_llm 线上请求形状", "group": "I", "ok": ok,
+                        "exit": rc,
+                        "detail": "" if ok else "path=%s body=%s" % (seen.get("path"), body)})
+        print("[%s] %-40s exit=%r" % ("PASS" if ok else "FAIL",
+                                      "I9 mr_llm 线上请求形状", rc))
+    finally:
+        srv.shutdown()
+
+    # I10 文本文件一律 LF —— .gitattributes 声明了 `* text=auto eol=lf`。
+    # 这不是洁癖：仓库里的 .py 带 shebang，CRLF 会让 Linux 上执行时
+    # 变成 "#!/usr/bin/env python\r"，内核找不到解释器且只报 "not found"。
+    exts = (".py", ".md", ".json", ".yml", ".yaml", ".example", ".txt",
+            ".cfg", ".toml", ".svg")
+    crlf = []
+    for root, dirs, files in os.walk(SKILL_ROOT):
+        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__")]
+        for fn in files:
+            if not fn.endswith(exts):
+                continue
+            fp = os.path.join(root, fn)
+            try:
+                if b"\r\n" in io.open(fp, "rb").read():
+                    crlf.append(os.path.relpath(fp, SKILL_ROOT))
+            except OSError:
+                continue
+    ok = not crlf
+    RESULTS.append({"case": "I10 文本文件行尾为 LF", "group": "I", "ok": ok,
+                    "exit": 0, "detail": ",".join(crlf[:6]) if crlf else ""})
+    print("[%s] %-40s %s" % ("PASS" if ok else "FAIL", "I10 文本文件行尾为 LF",
+                             "" if ok else crlf[:6]))
+
+
 def main():
     ap = argparse.ArgumentParser(description="mr-agent 全量自检")
     ap.add_argument("--quick", action="store_true", help="跳过真实网络探测")
     ap.add_argument("--json", action="store_true", help="结果输出为 JSON")
     args = ap.parse_args()
+    global QUICK
+    QUICK = args.quick
 
     base = tempfile.mkdtemp(prefix="mragentselftest-")
     sys.stderr.write("[selftest] 技能根目录: %s\n" % SKILL_ROOT)
@@ -537,6 +740,7 @@ def main():
         group_e()
         group_fg()
         group_h()
+        group_i()
     finally:
         shutil.rmtree(base, ignore_errors=True)
 
