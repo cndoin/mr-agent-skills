@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selftest:
+    name: 自检 · ${{ matrix.os }} · py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # 一个平台挂了，别的平台结果仍有价值
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # 刻意不装 mragent。
+      # 本自检验证的是脚本自身的契约与降级行为 —— E 组用例断言的正是
+      # "没有 mragent 时应返回结构化降级错误"。装上 mragent 反而会让它们失败。
+      # 同理也不装 R：完整 MR 链路不在 CI 覆盖范围，preflight 会如实报阻塞。
+      - name: 全量自检
+        run: python scripts/selftest.py --quick
+
+      - name: SKILL.md frontmatter 合规（Claude Code / WorkBuddy 双端）
+        run: python install.py --list
+
+      - name: 各脚本可独立执行
+        run: |
+          python scripts/preflight.py --no-network
+          python tools/mr_bench.py --help

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" rx="0" fill="#f4f6f0"/><circle cx="1000" cy="110" r="280" fill="#e4efdc"/><circle cx="1090" cy="535" r="250" fill="#dbe9dd"/>
+  <rect x="78" y="74" width="62" height="62" rx="18" fill="#315f51"/><path d="M92 108c10-19 18 19 28 0s16-11 19-6" fill="none" stroke="#d0edae" stroke-width="4" stroke-linecap="round"/>
+  <text x="164" y="117" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#18242a">MR Agent</text>
+  <text x="82" y="268" font-family="Georgia,serif" font-size="61" fill="#18242a">From papers to</text><text x="82" y="342" font-family="Georgia,serif" font-size="61" font-style="italic" fill="#3c6e60">testable hypotheses.</text>
+  <text x="86" y="415" font-family="Arial,sans-serif" font-size="21" fill="#65726e">An inspectable agent workflow for Mendelian randomization research</text>
+  <g transform="translate(770 114)"><rect width="340" height="350" rx="28" fill="#fff" stroke="#e2e9e1" stroke-width="2"/><path d="M93 102 158 170m0 0 66-72m-66 72-72 91m72-91 98 102m-98-102-7 132" stroke="#99b49a" stroke-width="4" stroke-dasharray="6 10"/><circle cx="158" cy="170" r="64" fill="#7d9d78"/><path d="M128 171h18l11-22 15 45 13-23h18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="50" width="84" height="84" rx="18" fill="#f8e0d5"/><path d="M58 82h48m-48 13h36m-36 13h43" stroke="#bf8068" stroke-width="4" stroke-linecap="round"/><rect x="224" y="212" width="74" height="74" rx="18" fill="#e8e0f1"/><path d="m244 250 12 12 23-26" stroke="#75658f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="86" y="564" font-family="Arial,sans-serif" font-size="16" letter-spacing="3" fill="#688072">OPEN SOURCE · BIOINFORMATICS · MIT</text>
+</svg>

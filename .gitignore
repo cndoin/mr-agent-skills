@@ -1,0 +1,39 @@
+# ---- Python 编译产物 ----
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ---- 运行时产物 ----
+# MRAgent 把中间结果写在 CWD，跑一次就会生成这些；
+# 曾经发生过 output/ 跟着发布出去的情况，这里显式排除。
+output/
+mragent-runs/
+*.log
+run.log
+test.R
+
+# ---- 第三方数据：不随仓库分发 ----
+# opengwas.csv 约 10 MB，来自上游 MRAgent 仓库（见 NOTICE 第 2 节）。
+# 它由 install.py 下载到 ~/.cache/mr-agent/ ，不进版本库。
+opengwas.csv
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+env/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- 敏感信息（永远不要提交）----
+.env
+*.env
+!.env.example
+.env.*
+*.key
+*.pem
+token.txt

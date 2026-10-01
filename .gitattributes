@@ -1,0 +1,15 @@
+# 统一行尾：仓库内所有文本文件一律 LF。
+# 不声明的话 Windows 上 git 默认 autocrlf=true 会把文本转成 CRLF —— 本项目的
+# 交付物包含要在 Linux 上执行的脚本，CRLF 会让 shebang 变成 "#!/bin/sh\r"，
+# 内核找不到解释器，服务起不来且只报 "not found"，极难定位。
+* text=auto eol=lf
+
+# 二进制不做行尾转换
+*.pyc binary
+*.zip binary
+*.pdf binary
+*.rdata binary
+
+# 语言统计：文档不计入代码量
+*.md linguist-documentation
+*.csv linguist-generated

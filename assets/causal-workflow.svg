@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 500" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Evidence to hypothesis</title><desc id="desc">A research map linking evidence, genetic instruments, and an outcome.</desc>
+  <defs>
+    <linearGradient id="paper" x1="76" y1="57" x2="525" y2="446" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#eef4e9"/></linearGradient>
+    <linearGradient id="green" x1="304" y1="161" x2="426" y2="292" gradientUnits="userSpaceOnUse"><stop stop-color="#a8cd91"/><stop offset="1" stop-color="#5b8870"/></linearGradient>
+    <filter id="shadow" x="17" y="12" width="585" height="485" filterUnits="userSpaceOnUse"><feDropShadow dx="0" dy="17" stdDeviation="18" flood-color="#29483A" flood-opacity=".12"/></filter>
+    <filter id="soft" x="220" y="129" width="236" height="236" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="22"/></filter>
+  </defs>
+  <g filter="url(#shadow)"><rect x="52" y="39" width="516" height="412" rx="19" fill="url(#paper)" stroke="#E3EAE0"/></g>
+  <circle cx="347" cy="248" r="96" fill="#C5E7AA" fill-opacity=".47" filter="url(#soft)"/>
+  <path d="M193 148 304 225M190 343l116-81m104-38 68-77m-63 98 86 72m-178 8-21 87m87-88 94 95" stroke="#78917D" stroke-width="2.5" stroke-dasharray="4 8" stroke-linecap="round"/>
+  <path d="M192 148c43 16 74 39 112 77 28 28 54 42 104-39 15-25 38-44 68-57" stroke="#A5B99E" stroke-width="2"/>
+  <rect x="84" y="88" width="116" height="118" rx="11" fill="#fff" stroke="#E2E9E1"/>
+  <rect x="101" y="108" width="28" height="35" rx="4" fill="#F7CDBD"/><path d="M108 118h14m-14 7h11m-11 7h14" stroke="#9A6251" stroke-width="2" stroke-linecap="round"/>
+  <path d="M142 112h38M142 122h27M101 159h76M101 170h62M101 181h49" stroke="#DCE4DD" stroke-width="4" stroke-linecap="round"/>
+  <rect x="83" y="294" width="120" height="107" rx="11" fill="#fff" stroke="#E2E9E1"/>
+  <path d="M106 343c10-31 18 31 28 0s19-26 27-10 17 18 25 0" stroke="#82A8C1" stroke-width="3" stroke-linecap="round"/><circle cx="106" cy="343" r="4" fill="#F09A77"/><circle cx="134" cy="343" r="4" fill="#7C9B79"/><circle cx="162" cy="333" r="4" fill="#A597CD"/><path d="M103 370h80m-80 11h55" stroke="#E3E9E2" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="360" cy="246" r="76" fill="url(#green)"/><circle cx="360" cy="246" r="57" stroke="#E8F1DB" stroke-opacity=".9" stroke-width="1.5"/>
+  <path d="M327 248h23l13-24 17 46 13-23h12" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="360" cy="246" r="4" fill="#fff"/>
+  <circle cx="303" cy="225" r="14" fill="#F6F3E8" stroke="#CAD8C5" stroke-width="2"/><circle cx="303" cy="225" r="4" fill="#5B8068"/>
+  <circle cx="420" cy="206" r="14" fill="#F6F3E8" stroke="#CAD8C5" stroke-width="2"/><circle cx="420" cy="206" r="4" fill="#5B8068"/>
+  <circle cx="309" cy="262" r="10" fill="#F6F3E8" stroke="#CAD8C5" stroke-width="2"/><circle cx="309" cy="262" r="3" fill="#5B8068"/>
+  <rect x="463" y="78" width="70" height="70" rx="18" fill="#D8E8F3"/><path d="M480 112h35m-17-17v35" stroke="#5D86A1" stroke-width="3" stroke-linecap="round"/><circle cx="498" cy="113" r="17" stroke="#5D86A1" stroke-width="2"/>
+  <rect x="474" y="298" width="69" height="69" rx="18" fill="#EEE7F8"/><path d="m492 334 9 9 23-25" stroke="#77699A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="508" cy="333" r="19" stroke="#B8AAD2" stroke-width="1.5"/>
+  <circle cx="501" cy="244" r="4" fill="#F1A087"/><circle cx="245" cy="244" r="4" fill="#87ABC0"/><circle cx="452" cy="186" r="3" fill="#9B8EC1"/>
+  <path d="M96 244h88m280 0h56" stroke="#D6E0D8" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

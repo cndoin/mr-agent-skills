@@ -1,0 +1,67 @@
+MRAgent Skill (mr-agent)
+Copyright (c) 2026 寇豆码 and contributors
+
+This product includes / depends on the following third-party work.
+Attribution is given here in accordance with their licenses.
+
+================================================================================
+1. MRAgent — the engine this skill orchestrates
+================================================================================
+  Project : MRAgent — An LLM-based multi-agent framework for causal
+            knowledge discovery via Mendelian randomization
+  Home    : https://github.com/xuwei1997/MRAgent
+  Package : https://pypi.org/project/mragent/   (imported, not vendored)
+  License : Apache License 2.0
+  Paper   : Briefings in Bioinformatics, 2025, doi:10.1093/bib/bbaf140
+
+  Relation to this skill: this skill does NOT copy, modify, or redistribute
+  any MRAgent source file. It `import`s the installed `mragent` package at
+  runtime and orchestrates it. All MRAgent code remains under Apache-2.0;
+  see <https://github.com/xuwei1997/MRAgent/blob/main/LICENSE>.
+
+================================================================================
+2. OpenGWAS / IEU OpenGWAS — GWAS catalogue and API
+================================================================================
+  Home    : https://opengwas.io/  |  https://api.opengwas.io/
+  Used by : tools/mr_gwas.py (offline catalogue lookup), and by MRAgent
+            through the R package `ieugwasr`
+  Terms   : Access requires a personal JWT obtained free of charge from
+            <https://api.opengwas.io/>. Usage is subject to the OpenGWAS
+            terms of use; this project ships no GWAS summary statistics.
+
+  `opengwas.csv` (the offline catalogue index, ~10 MB) is NOT distributed in
+  this git repository (see .gitignore). `install.py` downloads it from the
+  MRAgent repository into a local cache at:
+      ~/.cache/mr-agent/opengwas.csv
+  Users who do not run the installer and never call `--fetch` will not have
+  this file, and offline lookup will degrade to online mode.
+
+================================================================================
+3. R packages invoked by MRAgent (not bundled here)
+================================================================================
+  TwoSampleMR  GPL-2.0   https://github.com/MRCIEU/TwoSampleMR
+  ieugwasr     GPL-3.0   https://github.com/MRCIEU/ieugwasr
+  MRlap        GPL-3.0   https://github.com/n-mounier/MRlap
+  dplyr, vcfR, jsonlite  (see CRAN for individual licenses)
+
+  These are installed by the user into their own R library; this skill only
+  detects their presence (scripts/preflight.py) and documents the install
+  commands (references/environment.md). Nothing from them is redistributed.
+
+================================================================================
+4. Data sources searched at runtime
+================================================================================
+  PubMed / NCBI E-utilities  — https://www.ncbi.nlm.nih.gov/home/about/policies/
+                               Subject to NCBI usage policies and rate limits.
+  UMLS (Unified Medical Language System) — synonym expansion. Requires the
+                               user's own UMLS API key; see SECURITY.md.
+
+================================================================================
+Note on the upstream UMLS key
+================================================================================
+  The upstream MRAgent package ships a hard-coded UMLS API key inside
+  `agent_tool.py`. This skill deliberately does NOT reproduce that key in any
+  file. The skill runner disables synonym expansion by default. If you
+  explicitly enable `--synonyms`, upstream MRAgent uses its own embedded key;
+  the upstream API currently offers no way to override it. The standalone
+  `mr_synonyms.py` tool requires the user's own key.

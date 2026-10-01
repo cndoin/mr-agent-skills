@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Makefile 的 recipe 必须是 TAB，用空格会报 "missing separator"
+[Makefile]
+indent_style = tab
+
+# Markdown 行尾两空格是硬换行，不能裁
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+# CSV 是第三方数据，不要动它的行尾与空白
+[*.csv]
+insert_final_newline = false
+trim_trailing_whitespace = false
