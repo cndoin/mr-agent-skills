@@ -1113,13 +1113,37 @@ def build_parser():
                    help="打印 cis-eQTL 描述统计")
     p.add_argument("--describe-trans", dest="descriptive_trans", action="store_true",
                    help="打印 trans-eQTL 描述统计")
-    p.add_argument("--raw", help="附加参数原样透传给官方二进制（未列出的 flag 走这里）")
+    p.add_argument("--raw",
+                   help="附加参数原样透传给官方二进制（未列出的 flag 走这里）。"
+                        "值以 - 开头时建议写 --raw=\"--flag\"，或直接用 official 子命令")
     p.set_defaults(func=cmd_analyze)
 
     return ap
 
 
+def _normalize_argv(argv):
+    """让 `--raw --some-flag` 这种写法也能用。
+
+    argparse 的 _parse_optional 会把「以 - 开头且不含空格」的 token 当成选项，
+    于是 `--raw --heidi-off` 直接报 usage 错，而 help 里又引导用户这么写。
+    把紧跟在 --raw 后面、以 - 开头的值改写成 `--raw=<值>` 即可绕开
+    （含空格的值 argparse 本来就当值处理，无需改写）。
+    """
+    out, i = [], 0
+    while i < len(argv):
+        tok = argv[i]
+        if tok == "--raw" and i + 1 < len(argv) and argv[i + 1].startswith("-"):
+            out.append("--raw=" + argv[i + 1])
+            i += 2
+            continue
+        out.append(tok)
+        i += 1
+    return out
+
+
 def main():
+    # `--raw --flag` 里的值会被 argparse 误判成选项，先规范化再解析
+    sys.argv[1:] = _normalize_argv(sys.argv[1:])
     ap = build_parser()
     a = parse_args_or_fail(ap, TOOL)
     if not getattr(a, "func", None):

@@ -210,6 +210,9 @@ python tools/mr_smr.py analyze --engine native --bfile /tmp/fix/ref \
 双分子性状 / omics / two-sample SMR**）/ `--out` / `--thread-num`，以及
 `--esd` / `--flist`（native 专用）与 `--raw`（万能透传）。
 
+`--raw` 的值若以 `-` 开头，注意两种写法都可用：`--raw "--heidi-off"`（工具会自动
+规范化）或 `--raw="--heidi-off"`。多参数用引号包成一段：`--raw "--heidi-off --peqtl-smr 1e-5"`。
+
 ## 7. 官方默认参数
 
 | 参数 | 默认值 | 含义 |
