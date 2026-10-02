@@ -5,7 +5,7 @@ license: MIT
 compatibility: "CI 已验证 Python 3.11/3.12；预检接受 3.9–3.12（上游排除 3.9.7），但 3.9/3.10 未纳入 CI，3.13+ 当前拦截。完整运行还需 R > 4.3.4、mragent 包与 OpenGWAS JWT。缺依赖时预检会报告阻塞项；未装 mragent 时离线检索 / 打包 / CSV 编辑 / 评测工具仍可运行。"
 allowed-tools: "Bash, Read, Write, Edit, Grep, Glob, WebFetch, WebSearch, TodoWrite"
 metadata:
-  version: "1.3.1"
+  version: "1.3.2"
   author: 寇豆码
   category: bioinformatics
   tags: [mendelian-randomization, causal-inference, gwas, opengwas, twosamplemr, smr, heidi, mragent, strobe-mr, epidemiology, bioinformatics]
@@ -97,7 +97,7 @@ metadata:
 ### 第一步永远是 preflight，不要凭感觉开工
 
 ```bash
-python scripts/preflight.py --json
+python scripts/preflight.py            # 默认即输出 JSON；离线加 --no-network
 ```
 
 它会输出结构化 JSON：`python` 版本是否合规、`R` 是否在 PATH、R 包缺哪几个、
@@ -308,7 +308,7 @@ python install.py --target deepseek
 ## 自检
 
 ```bash
-python scripts/selftest.py          # 全量，118 条用例
+python scripts/selftest.py          # 全量，122 条用例
 python scripts/selftest.py --quick  # 跳过真实网络探测
 python scripts/selftest.py --json   # 输出 JSON，失败时退出码 1（可直接接 CI）
 ```

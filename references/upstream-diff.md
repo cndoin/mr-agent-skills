@@ -2,7 +2,7 @@
 
 比对时间 **2026-10-01**（第二轮复核）。
 对象：`github.com/xuwei1997/MRAgent` main 分支 + PyPI `mragent==0.2.5`。
-本技能版本：**1.3.1**，自检 **118 条用例全绿**。
+本技能版本：**1.3.2**，自检 **122 条用例全绿**。
 
 ---
 
@@ -312,7 +312,7 @@ $ ls .idea/        → 有（且已被提交）
 
 | 验证 | 结果 |
 | --- | --- |
-| 自检用例 | **118 条，全绿** —— 工作区与 5 个安装位（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）各跑一遍 |
+| 自检用例 | **122 条，全绿** —— 工作区与 5 个安装位（Claude Code / WorkBuddy / CodeBuddy / Codex / DeepSeek Harness）各跑一遍 |
 | SMR 数值对官方金标准 | native 引擎 `b_SMR` / `se_SMR` / `p_SMR` 与官方 `smr` 1.3.1 **一致到约 6 位有效数字**，`nsnp_HEIDI` 精确一致（自检 J10/J12） |
 | SMR 参数无静默丢弃 | `analyze` 暴露的 **48 个** flag 逐个断言能翻译成官方 flag，且翻译表无死条目（自检 J5/J6/J7） |
 | SMR 假成功防护 | 官方出错仍 exit 0，本工具改为「日志提 `Error:` 行 + 校验 BESD 三件套真的生成」（自检 J11） |

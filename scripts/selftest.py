@@ -986,6 +986,22 @@ def group_j(base):
            "download_request() 未带非默认 UA —— 官方下载站会直接回 403",
            group="J")
 
+    # J16 `--raw --flag` 的空格写法必须可用。
+    #     argparse 会把以 - 开头且不含空格的值当成选项，导致
+    #     `--raw --heidi-off` 报 usage 错。_normalize_argv() 负责规范化。
+    def _j16():
+        if not hasattr(mod, "_normalize_argv"):
+            return False
+        f = mod._normalize_argv
+        return (f(["--raw", "--heidi-off", "--out", "x"])
+                == ["--raw=--heidi-off", "--out", "x"]
+                and f(["--raw", "--trans", "--out", "x"])
+                == ["--raw=--trans", "--out", "x"]
+                and f(["--out", "x"]) == ["--out", "x"]
+                and f(["--raw"]) == ["--raw"])
+    doc_ok("J16 --raw --flag 空格写法可用", _j16(),
+           "_normalize_argv() 未启用或转换不完整", group="J")
+
     # J15 拿同一请求头向真实下载站发一个 1 字节 Range 请求，确认真的被放行。
     #     J14 只能证明"请求头写对了"，证明不了"服务端认"。
     if QUICK:
@@ -1152,6 +1168,91 @@ def doc_case_count():
     doc_ok("K6 文档用例数声明一致", not bad, "; ".join(bad))
 
 
+# ---------------------------------------------------------------- L. 文档命令面
+# 教训来源：SKILL.md 长期写着 `preflight.py --json`，而该 flag 根本不存在。
+# 文档示例从没被执行过，所以错了很久没人发现。这一组把「文档里写的命令」
+# 也当成代码来测：命令引用的脚本必须存在，用到的 flag 必须被工具接受。
+
+DOC_CMD_RE = re.compile(r"python\s+(?:\./)?((?:tools|scripts)/[\w.]+\.py)([^\n`]*)")
+DOC_FLAG_RE = re.compile(r"(?<!\S)(--[a-z][\w-]*)")
+SRC_FLAG_RE = re.compile(r'"(--[a-z][\w-]*)"')
+
+
+def accepted_flags(script):
+    """工具源码里出现的 flag 字面量集合。
+
+    add_argument 的 flag 一律是字符串字面量，扫源码即可拿到「可接受集合」。
+    比 import 工具再摸 argparse 稳：不触发 _common 之类的同目录导入。
+    """
+    src = read(script)
+    if src is None:
+        return None
+    return set(SRC_FLAG_RE.findall(src))
+
+
+def doc_commands():
+    """遍历所有 md，产出 (相对路径, 脚本, 命令尾串)。"""
+    out = []
+    for root, dirs, files in os.walk(SKILL_ROOT):
+        dirs[:] = [d for d in dirs
+                   if d not in (".git", "mragent-runs", "__pycache__",
+                                ".pytest_cache", ".mypy_cache")]
+        for fn in sorted(files):
+            if not fn.endswith(".md"):
+                continue
+            # CHANGELOG 是历史日志：它会引用「当时写错、后来修掉」的命令，
+            # 那是记录而非用法说明，和 K6 的用例数口径一致地排除掉。
+            if fn.startswith("CHANGELOG"):
+                continue
+            p = os.path.join(root, fn)
+            try:
+                text = io.open(p, encoding="utf-8").read()
+            except Exception:
+                continue
+            rel = os.path.relpath(p, SKILL_ROOT)
+            for m in DOC_CMD_RE.finditer(text):
+                out.append((rel, m.group(1), m.group(2).split("#")[0].strip()))
+    return out
+
+
+def group_l():
+    cmds = doc_commands()
+    if not cmds:
+        skip("L1 文档命令脚本存在", "文档里未发现 python tools/scripts 命令", group="L")
+        skip("L2 文档命令 flag 被接受", "同上", group="L")
+        skip("L3 校验覆盖面守卫", "同上", group="L")
+        return
+
+    # L1 命令引用的脚本必须真实存在
+    bad = sorted({"%s -> %s" % (rel, sc) for rel, sc, _ in cmds
+                  if not os.path.isfile(os.path.join(SKILL_ROOT, sc))})
+    doc_ok("L1 文档命令脚本存在", not bad, "; ".join(bad), group="L")
+
+    # L2 命令里的 flag 必须被对应工具接受
+    cache = {}
+    bad, n = [], 0
+    for rel, script, rest in cmds:
+        if script not in cache:
+            cache[script] = accepted_flags(script)
+        known = cache[script]
+        if known is None:
+            continue
+        # mr_smr 的 `official -- ...` 是原样透传官方 flag，官方 flag 不在本工具源码里
+        if "official" in rest.split("--")[0]:
+            continue
+        if os.path.basename(script) == "mr_smr.py" and "official" in rest:
+            continue
+        n += 1
+        for f in sorted(set(DOC_FLAG_RE.findall(rest))):
+            if f not in known:
+                bad.append("%s: %s %s" % (rel, script, f))
+    doc_ok("L2 文档命令 flag 被接受", not bad, "; ".join(sorted(set(bad))[:6]), group="L")
+
+    # L3 守卫：必须真的校验到足够多的命令，否则说明提取器失效、用例是"空过"
+    doc_ok("L3 校验覆盖面守卫", n >= 40, "只校验到 %d 条命令，提取器可能失效" % n,
+           group="L")
+
+
 def main():
     ap = argparse.ArgumentParser(description="mr-agent 全量自检")
     ap.add_argument("--quick", action="store_true", help="跳过真实网络探测")
@@ -1174,6 +1275,7 @@ def main():
         group_i()
         group_j(base)
         group_k()
+        group_l()
         doc_case_count()
     finally:
         shutil.rmtree(base, ignore_errors=True)

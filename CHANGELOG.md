@@ -2,6 +2,23 @@
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) format.
 
+## 1.3.2 — 2026-10-02
+
+### Added
+
+- Self-check group L (3 cases): **documented commands are now tested like code**.
+  L1 commands must reference existing scripts; L2 every flag used in the docs must be
+  accepted by the corresponding tool; L3 is a coverage guard that fails when too few
+  commands are checked -- this prevents a vacuous test that can never fail.
+  Case count 118 -> 122 (incl. J16).
+
+### Fixed
+
+- **`python scripts/preflight.py --json` in `SKILL.md` was an invalid command.**
+  `preflight.py` has no `--json` flag; it always prints JSON. The bad example had been
+  in the docs for a long time because examples were never executed. It is now pinned by
+  L2; the remaining 74 documented commands all pass.
+
 ## 1.3.1 — 2026-10-01
 
 ### Added
